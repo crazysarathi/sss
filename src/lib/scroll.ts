@@ -23,10 +23,14 @@ export function scrollToSection(hash: string) {
   if (smoother) {
     smoother.scrollTo(target, true, "top 72px");
   } else {
+    // autoKill must stay off: on touch devices, momentum scrolling and
+    // ScrollTrigger pin adjustments emit scroll events mid-tween, which
+    // autoKill would treat as user input and cancel the scroll outright.
     gsap.to(window, {
-      scrollTo: { y: target, offsetY: 72, autoKill: true },
+      scrollTo: { y: target, offsetY: 72, autoKill: false },
       duration: 1,
       ease: "power3.inOut",
+      overwrite: "auto",
     });
   }
 }

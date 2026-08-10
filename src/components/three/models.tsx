@@ -222,93 +222,139 @@ export function Paddle({ scale = 1, ...props }: PaddleProps) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Mountain — the hills of Salem as a glowing low-poly terrain range   */
+/* Mountain — the hills of Salem: layered night ridges with glowing    */
+/* ridgelines, like the crest's mountain lit for a night match.        */
 /* ------------------------------------------------------------------ */
 
-/** Deterministic ridge height: layered sines shaped by a center bias. */
-function ridgeHeight(x: number, z: number): number {
-  const centerBias = Math.max(0, 1 - Math.abs(x) / 3.4);
-  const ridge =
-    Math.sin(x * 1.7 + 0.6) * 0.55 +
-    Math.sin(x * 3.9 + z * 1.3) * 0.28 +
-    Math.sin(x * 7.1 - z * 2.2) * 0.12;
-  const depthFade = 0.55 + 0.45 * Math.min(1, (z + 2.2) / 4);
-  return Math.max(0, (ridge + 0.75) * centerBias * depthFade) * 1.35;
+interface RidgeLayer {
+  /** ridge profile as [x, y] pairs, left → right */
+  profile: Array<[number, number]>;
+  z: number;
+  fill: string;
+  fillOpacity: number;
+  line: string;
+  lineOpacity: number;
+  driftAmp: number;
+  driftSpeed: number;
+  driftPhase: number;
 }
+
+const RIDGE_BOTTOM = -1.9;
+
+const RIDGE_LAYERS: RidgeLayer[] = [
+  {
+    // far range — tallest, hazy
+    profile: [
+      [-3.6, 0.1], [-2.7, 1.25], [-2.0, 0.75], [-1.1, 1.65], [-0.3, 1.0],
+      [0.5, 1.9], [1.3, 1.05], [2.1, 1.5], [2.9, 0.7], [3.6, 1.0],
+    ],
+    z: -1.4, fill: BRAND.royalDeep, fillOpacity: 0.45,
+    line: BRAND.royalBright, lineOpacity: 0.4,
+    driftAmp: 0.22, driftSpeed: 0.06, driftPhase: 0,
+  },
+  {
+    // middle range
+    profile: [
+      [-3.6, -0.05], [-2.5, 0.95], [-1.6, 0.4], [-0.7, 1.25], [0.2, 0.55],
+      [1.1, 1.4], [2.1, 0.5], [3.0, 0.95], [3.6, 0.35],
+    ],
+    z: -0.7, fill: BRAND.royalInk, fillOpacity: 0.85,
+    line: BRAND.royalBright, lineOpacity: 0.65,
+    driftAmp: 0.14, driftSpeed: 0.09, driftPhase: 2.1,
+  },
+  {
+    // near range — darkest, lime ridgeline
+    profile: [
+      [-3.6, -0.45], [-2.3, 0.55], [-1.3, -0.05], [0.0, 0.9], [0.9, 0.15],
+      [2.0, 0.7], [3.6, -0.35],
+    ],
+    z: 0, fill: "#071630", fillOpacity: 1,
+    line: BRAND.lime, lineOpacity: 0.8,
+    driftAmp: 0.07, driftSpeed: 0.12, driftPhase: 4.2,
+  },
+];
 
 interface MountainProps {
   [key: string]: unknown;
 }
 
 export function Mountain(props: MountainProps) {
-  const groupRef = useRef<THREE.Group>(null);
+  const layerRefs = useRef<Array<THREE.Group | null>>([]);
 
-  const { solidGeom, wireGeom } = useMemo(() => {
-    const make = () => {
-      const g = new THREE.PlaneGeometry(6.8, 4.4, 46, 26);
-      g.rotateX(-Math.PI / 2);
-      const pos = g.attributes.position as THREE.BufferAttribute;
-      for (let i = 0; i < pos.count; i++) {
-        const x = pos.getX(i);
-        const z = pos.getZ(i);
-        pos.setY(i, ridgeHeight(x, z));
-      }
-      pos.needsUpdate = true;
-      g.computeVertexNormals();
-      return g;
-    };
-    return { solidGeom: make(), wireGeom: make() };
-  }, []);
-  useDispose(solidGeom, wireGeom);
-
-  // A slow "aurora" shimmer over the wireframe ridge.
-  const wireMat = useMemo(
-    () =>
-      new THREE.MeshBasicMaterial({
-        color: BRAND.royalBright,
-        wireframe: true,
+  const layers = useMemo(() => {
+    return RIDGE_LAYERS.map((layer) => {
+      // filled silhouette
+      const shape = new THREE.Shape();
+      shape.moveTo(layer.profile[0][0], RIDGE_BOTTOM);
+      layer.profile.forEach(([x, y]) => shape.lineTo(x, y));
+      shape.lineTo(layer.profile[layer.profile.length - 1][0], RIDGE_BOTTOM);
+      shape.closePath();
+      const fillGeom = new THREE.ShapeGeometry(shape);
+      const fillMat = new THREE.MeshBasicMaterial({
+        color: layer.fill,
         transparent: true,
-        opacity: 0.34,
+        opacity: layer.fillOpacity,
+        depthWrite: false,
+      });
+
+      // glowing ridgeline along the top edge
+      const points = layer.profile.map(([x, y]) => new THREE.Vector3(x, y, 0.001));
+      const lineGeom = new THREE.BufferGeometry().setFromPoints(points);
+      const lineMat = new THREE.LineBasicMaterial({
+        color: layer.line,
+        transparent: true,
+        opacity: layer.lineOpacity,
         blending: THREE.AdditiveBlending,
         depthWrite: false,
-      }),
-    []
+      });
+      const line = new THREE.Line(lineGeom, lineMat);
+
+      return { layer, fillGeom, fillMat, lineGeom, lineMat, line };
+    });
+  }, []);
+
+  useDispose(
+    ...layers.flatMap((l) => [l.fillGeom, l.fillMat, l.lineGeom, l.lineMat])
   );
-  useDispose(wireMat);
 
   useFrame(({ clock }) => {
-    const g = groupRef.current;
-    if (!g) return;
     const t = clock.getElapsedTime();
-    wireMat.opacity = 0.26 + Math.sin(t * 0.8) * 0.1;
-    g.rotation.y = Math.sin(t * 0.12) * 0.06;
+    layers.forEach(({ layer }, i) => {
+      const g = layerRefs.current[i];
+      if (!g) return;
+      g.position.x = Math.sin(t * layer.driftSpeed + layer.driftPhase) * layer.driftAmp;
+    });
   });
 
   return (
-    <group ref={groupRef} {...props}>
-      {/* dark solid terrain body */}
-      <mesh geometry={solidGeom} position={[0, -1.05, 0]} rotation={[0.32, 0, 0]}>
-        <meshStandardMaterial
-          color={BRAND.royalDeep}
-          roughness={0.62}
-          metalness={0.15}
-          flatShading
-        />
-      </mesh>
-      {/* glowing wireframe skin floating just above the surface */}
-      <mesh
-        geometry={wireGeom}
-        material={wireMat}
-        position={[0, -1.02, 0]}
-        rotation={[0.32, 0, 0]}
-        scale={[1.001, 1.02, 1.001]}
-      />
-      {/* lime summit beacon on the tallest peak */}
-      <mesh position={[0.42, 1.06, -0.2]}>
-        <sphereGeometry args={[0.05, 12, 12]} />
+    <group {...props}>
+      {layers.map(({ layer, fillGeom, fillMat, line }, i) => (
+        <group
+          key={i}
+          ref={(node) => {
+            layerRefs.current[i] = node;
+          }}
+          position={[0, -0.15, layer.z]}
+        >
+          <mesh geometry={fillGeom} material={fillMat} />
+          <primitive object={line} />
+        </group>
+      ))}
+      {/* lime summit beacon on the near range's tallest peak */}
+      <mesh position={[0, 0.78, 0.05]}>
+        <sphereGeometry args={[0.045, 12, 12]} />
         <meshBasicMaterial color={BRAND.lime} />
       </mesh>
-      <pointLight position={[0.42, 1.3, 0.3]} intensity={0.7} color={BRAND.lime} distance={4} />
+      <pointLight position={[0, 1.0, 0.6]} intensity={0.8} color={BRAND.lime} distance={4.5} />
+      {/* drifting fireflies over the near slope */}
+      <ParticleField
+        count={26}
+        spread={2.4}
+        size={0.05}
+        color={BRAND.lime}
+        opacity={0.45}
+        position={[0, 0.2, -0.3]}
+      />
     </group>
   );
 }

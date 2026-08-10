@@ -1,13 +1,13 @@
 import { useEffect, useRef, useState } from "react";
-import { RotateCcw, Sparkles } from "lucide-react";
+import { ChevronRight, RotateCcw } from "lucide-react";
 import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import { cn, prefersReducedMotion } from "@/lib/utils";
 import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { crestReveal } from "@/data/siteData";
 import { burstConfetti } from "@/lib/confetti";
+import { requestLeagueInvite } from "@/lib/leagueInvite";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { GlassCard } from "@/components/shared/GlassCard";
-import { MagneticButton } from "@/components/shared/MagneticButton";
 import { Button } from "@/components/ui/button";
 import crestLogo from "@/assets/logos/sss-logo-800.png";
 import karthiPoster from "@/assets/images/karthi-reveal.jpg";
@@ -20,8 +20,9 @@ const CREST_ALT =
 type Phase = "pre" | "revealed";
 
 /**
- * The crest reveal ceremony — tap to unveil the SSS crest with stadium
- * beams, a light flash, shockwaves and confetti. Replayable.
+ * The crest reveal ceremony — drag the pickleball along the serve track to
+ * launch the smash that unveils the SSS crest with stadium beams, a light
+ * flash, shockwaves and confetti. Replayable.
  */
 export function CrestRevealSection() {
   const reduced = usePrefersReducedMotion();
@@ -47,11 +48,18 @@ export function CrestRevealSection() {
   const veilRef = useRef<HTMLDivElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const preWrapRef = useRef<HTMLDivElement>(null);
+  const trackRef = useRef<HTMLDivElement>(null);
+  const trackFillRef = useRef<HTMLDivElement>(null);
+  const trackLabelRef = useRef<HTMLDivElement>(null);
+  const slideBallRef = useRef<HTMLButtonElement>(null);
+  const throwBallRef = useRef<HTMLDivElement>(null);
   const postTitleRef = useRef<HTMLHeadingElement>(null);
   const postSubRef = useRef<HTMLParagraphElement>(null);
   const replayWrapRef = useRef<HTMLDivElement>(null);
 
   const tlRef = useRef<gsap.core.Timeline | null>(null);
+  const slideRef = useRef({ active: false, x: 0, max: 1, grabDX: 0 });
+  const springTweenRef = useRef<gsap.core.Tween | null>(null);
   const splitRef = useRef<SplitText | null>(null);
   const sheenTweenRef = useRef<gsap.core.Tween | null>(null);
   const confettiCleanupRef = useRef<(() => void) | null>(null);
@@ -126,13 +134,14 @@ export function CrestRevealSection() {
         yoyo: true,
         repeat: -1,
       });
-      gsap.to("[data-cta-ring]", {
-        scale: 1.16,
-        opacity: 0.15,
-        duration: 1.7,
+      gsap.to("[data-slide-chevron]", {
+        opacity: 0.9,
+        x: 5,
+        duration: 0.6,
         ease: "sine.inOut",
         yoyo: true,
         repeat: -1,
+        stagger: 0.14,
       });
 
       // ----- scroll entrances
@@ -253,6 +262,11 @@ export function CrestRevealSection() {
         splitRef.current = null;
         tiltOnRef.current = true;
         sheenTweenRef.current?.play(0);
+        // A beat after the first ceremony: invite them into the league
+        // (no-op if the invite was already shown this session).
+        if (mode === "initial") {
+          gsap.delayedCall(0.7, requestLeagueInvite);
+        }
       },
     });
     tlRef.current = tl;
@@ -265,6 +279,31 @@ export function CrestRevealSection() {
       );
     }
     const t0 = mode === "initial" ? 0.25 : 0;
+
+    // 1.5 — the serve: a pickleball is hurled across the stage and
+    // smashes into the silhouetted crest exactly on the flash.
+    const stage = stageRef.current;
+    const ball = throwBallRef.current;
+    if (stage && ball) {
+      const stageRect = stage.getBoundingClientRect();
+      const emblemRect = emblemWrap.getBoundingClientRect();
+      const size = 44;
+      const ex = emblemRect.left + emblemRect.width / 2 - stageRect.left - size / 2;
+      const ey = emblemRect.top + emblemRect.height / 2 - stageRect.top - size / 2;
+      const sx = -size - 40; // launches from outside the stage's left edge
+      const sy = stageRect.height * 0.9;
+      const peakY = Math.max(ey - 180, 10);
+      const T = t0 + 0.18;
+      const FLIGHT = 0.57; // impact lands on the flash at t0 + 0.75
+
+      tl.set(ball, { x: sx, y: sy, autoAlpha: 1, rotation: 0, scale: 0.85 }, T)
+        .to(ball, { x: ex, duration: FLIGHT, ease: "none" }, T)
+        .to(ball, { y: peakY, duration: FLIGHT * 0.55, ease: "power2.out" }, T)
+        .to(ball, { y: ey, duration: FLIGHT * 0.45, ease: "power2.in" }, T + FLIGHT * 0.55)
+        .to(ball, { rotation: 940, scale: 1.2, duration: FLIGHT, ease: "power1.in" }, T)
+        // impact: the ball vanishes into the crest
+        .to(ball, { autoAlpha: 0, scale: 0.3, duration: 0.12, ease: "power1.in" }, T + FLIGHT);
+    }
 
     // 2 — stage dims, stadium beams surge
     tl.fromTo(
@@ -356,6 +395,84 @@ export function CrestRevealSection() {
     startedRef.current = true;
     setPhase("revealed");
     playReveal("initial");
+  };
+
+  // ----- the slide-to-serve track ------------------------------------------
+  const BALL_PAD = 6; // px inset of the ball inside the track
+
+  /** Paints one frame of the slide: ball position + roll, fill, label fade. */
+  const applySlide = (x: number) => {
+    const ball = slideBallRef.current;
+    const fill = trackFillRef.current;
+    const label = trackLabelRef.current;
+    const s = slideRef.current;
+    const p = s.max > 0 ? x / s.max : 0;
+    // The ball rolls along the track as it travels.
+    if (ball) gsap.set(ball, { x, rotation: x * 0.85 });
+    if (fill) gsap.set(fill, { width: x + (ball?.offsetWidth ?? 52) + BALL_PAD });
+    if (label) gsap.set(label, { opacity: Math.max(0, 1 - p * 1.8) });
+  };
+
+  /** The serve: the ball zips to the end of the track and fires the reveal. */
+  const completeSlide = contextSafe(() => {
+    if (startedRef.current) return;
+    const s = slideRef.current;
+    s.active = false;
+    springTweenRef.current?.kill();
+    springTweenRef.current = gsap.to(s, {
+      x: s.max,
+      duration: 0.16,
+      ease: "power2.in",
+      onUpdate: () => applySlide(s.x),
+      onComplete: onUnveil,
+    });
+  });
+
+  const onSlidePointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (phase !== "pre" || startedRef.current || prefersReducedMotion()) return;
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const track = trackRef.current;
+    const ball = slideBallRef.current;
+    if (!track || !ball) return;
+    const s = slideRef.current;
+    springTweenRef.current?.kill();
+    s.max = track.clientWidth - ball.offsetWidth - BALL_PAD * 2;
+    s.grabDX = e.clientX - s.x;
+    s.active = true;
+    ball.setPointerCapture(e.pointerId);
+  };
+
+  const onSlidePointerMove = (e: React.PointerEvent<HTMLButtonElement>) => {
+    const s = slideRef.current;
+    if (!s.active) return;
+    s.x = Math.min(Math.max(e.clientX - s.grabDX, 0), s.max);
+    applySlide(s.x);
+    if (s.x >= s.max - 1) completeSlide();
+  };
+
+  const onSlidePointerUp = contextSafe(() => {
+    const s = slideRef.current;
+    if (!s.active) return;
+    s.active = false;
+    // Close enough — count it as a serve. Otherwise spring back.
+    if (s.x >= s.max * 0.8) {
+      completeSlide();
+      return;
+    }
+    springTweenRef.current?.kill();
+    springTweenRef.current = gsap.to(s, {
+      x: 0,
+      duration: 0.8,
+      ease: "elastic.out(1, 0.5)",
+      onUpdate: () => applySlide(s.x),
+    });
+  });
+
+  // Keyboard users shouldn't have to drag — activate instantly.
+  const onCtaKeyDown = (e: React.KeyboardEvent<HTMLButtonElement>) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    e.preventDefault();
+    onUnveil();
   };
 
   const onReplay = () => playReveal("replay");
@@ -580,23 +697,100 @@ export function CrestRevealSection() {
                     "hidden"
                 )}
               >
-                <MagneticButton strength={0.3} className="relative">
-                  <span
+                <div
+                  ref={trackRef}
+                  className="relative h-16 w-[min(82vw,340px)] overflow-hidden rounded-full border border-lime/30 bg-night/60 shadow-[inset_0_2px_12px_rgba(5,13,31,0.7)] backdrop-blur-md"
+                >
+                  {/* progress fill trailing the ball */}
+                  <div
+                    ref={trackFillRef}
                     aria-hidden="true"
-                    data-cta-ring
-                    className="absolute -inset-4 rounded-full border border-lime/40 opacity-60"
+                    className="absolute inset-y-0 left-0 w-0 rounded-full bg-gradient-to-r from-lime/5 via-lime/20 to-lime/40"
                   />
-                  <button
-                    type="button"
-                    onClick={onUnveil}
-                    tabIndex={phase === "revealed" ? -1 : 0}
-                    className="relative flex h-40 w-40 flex-col items-center justify-center gap-2 rounded-full border border-lime/50 bg-lime/10 px-5 font-condensed text-sm uppercase leading-relaxed tracking-[0.3em] text-lime backdrop-blur-md transition-all duration-300 hover:bg-lime/20 hover:shadow-glow-lime"
+                  {/* label + nudge chevrons */}
+                  <div
+                    ref={trackLabelRef}
+                    aria-hidden="true"
+                    className="pointer-events-none absolute inset-0 flex items-center justify-center gap-3 pl-12"
                   >
-                    <Sparkles aria-hidden="true" className="h-4 w-4" />
-                    {crestReveal.unveilCta}
+                    <span className="flex items-center">
+                      {[0, 1, 2].map((i) => (
+                        <ChevronRight
+                          key={i}
+                          data-slide-chevron
+                          className="-ml-2 h-4 w-4 text-lime opacity-30"
+                        />
+                      ))}
+                    </span>
+                    <span className="font-condensed text-sm uppercase tracking-[0.3em] text-lime">
+                      {crestReveal.unveilCta}
+                    </span>
+                  </div>
+                  {/* the ball — grab it and drag it down the track */}
+                  <button
+                    ref={slideBallRef}
+                    type="button"
+                    onPointerDown={onSlidePointerDown}
+                    onPointerMove={onSlidePointerMove}
+                    onPointerUp={onSlidePointerUp}
+                    onPointerCancel={onSlidePointerUp}
+                    onKeyDown={onCtaKeyDown}
+                    onContextMenu={(e) => e.preventDefault()}
+                    tabIndex={phase === "revealed" ? -1 : 0}
+                    aria-label={`${crestReveal.unveilCta} — drag the ball to the end of the track, or press Enter, to unveil the crest`}
+                    className="absolute left-1.5 top-1.5 h-[3.25rem] w-[3.25rem] cursor-grab touch-none select-none rounded-full outline-none will-change-transform focus-visible:ring-2 focus-visible:ring-lime/70 active:cursor-grabbing"
+                  >
+                    <svg
+                      viewBox="0 0 100 100"
+                      className="h-full w-full drop-shadow-[0_10px_22px_rgba(5,13,31,0.65)]"
+                    >
+                      <defs>
+                        <radialGradient
+                          id="ctaSlideBall"
+                          cx="0.36"
+                          cy="0.3"
+                          r="0.85"
+                        >
+                          <stop offset="0" stopColor="#fffef5" />
+                          <stop offset="0.55" stopColor="#efeee6" />
+                          <stop offset="1" stopColor="#c9c7b6" />
+                        </radialGradient>
+                      </defs>
+                      <circle cx="50" cy="50" r="46" fill="url(#ctaSlideBall)" stroke="#0d2a55" strokeWidth="4" />
+                      <circle cx="50" cy="28" r="7" fill="#0d2a55" />
+                      <circle cx="30" cy="42" r="7" fill="#0d2a55" />
+                      <circle cx="70" cy="42" r="7" fill="#0d2a55" />
+                      <circle cx="40" cy="62" r="7" fill="#0d2a55" />
+                      <circle cx="62" cy="63" r="7" fill="#0d2a55" />
+                      <circle cx="51" cy="80" r="6" fill="#0d2a55" />
+                    </svg>
                   </button>
-                </MagneticButton>
+                </div>
               </div>
+            </div>
+
+            {/* the served pickleball that smashes the crest open */}
+            <div
+              ref={throwBallRef}
+              aria-hidden="true"
+              className="pointer-events-none absolute left-0 top-0 z-[25] h-11 w-11 opacity-0"
+            >
+              <svg viewBox="0 0 100 100" className="h-full w-full drop-shadow-[0_6px_14px_rgba(0,0,0,0.45)]">
+                <defs>
+                  <radialGradient id="crestThrowBall" cx="0.36" cy="0.3" r="0.85">
+                    <stop offset="0" stopColor="#fffef5" />
+                    <stop offset="0.55" stopColor="#efeee6" />
+                    <stop offset="1" stopColor="#c9c7b6" />
+                  </radialGradient>
+                </defs>
+                <circle cx="50" cy="50" r="46" fill="url(#crestThrowBall)" stroke="#0d2a55" strokeWidth="4" />
+                <circle cx="50" cy="28" r="7" fill="#0d2a55" />
+                <circle cx="30" cy="42" r="7" fill="#0d2a55" />
+                <circle cx="70" cy="42" r="7" fill="#0d2a55" />
+                <circle cx="40" cy="62" r="7" fill="#0d2a55" />
+                <circle cx="62" cy="63" r="7" fill="#0d2a55" />
+                <circle cx="51" cy="80" r="6" fill="#0d2a55" />
+              </svg>
             </div>
 
             {/* dim veil + confetti canvas over the whole stage column */}

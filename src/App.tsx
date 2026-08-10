@@ -9,6 +9,7 @@ import { BackToTop } from "@/components/layout/BackToTop";
 import { Footer } from "@/components/layout/Footer";
 import { NoiseOverlay } from "@/components/shared/NoiseOverlay";
 import { AmbientBackground } from "@/components/shared/AmbientBackground";
+import { LeagueInviteDialog } from "@/components/shared/LeagueInviteDialog";
 import { Toaster } from "@/components/ui/sonner";
 
 import { HeroSection } from "@/components/sections/HeroSection";
@@ -91,6 +92,8 @@ export default function App() {
 
       <BackToTop />
       <NoiseOverlay />
+      {/* TNPPL invite — auto-opens once per session, a beat after boot */}
+      <LeagueInviteDialog booted={booted} />
       <Toaster position="bottom-center" />
     </>
   );

@@ -69,13 +69,13 @@ export const tnppl = {
 export const crestReveal = {
   kicker: "The Crest",
   title: "Relive the reveal",
-  lead: "On 12 July 2026, our crest was unveiled to Salem. Tap to relive the moment.",
+  lead: "On 12 July 2026, our crest was unveiled to Salem. Serve the ball to relive the moment.",
   unveiledBy: {
     label: "Unveiled by",
     name: "Actor Karthi",
     date: "12 · 07 · 2026",
   },
-  unveilCta: "TAP TO UNVEIL",
+  unveilCta: "SLIDE TO SERVE",
   postTitleLines: ["THE CREST", "IS HERE."],
   postSub: "Twin paddles, one ball, and the hills we call home.",
   replayLabel: "Replay reveal",

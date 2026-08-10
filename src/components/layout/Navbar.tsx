@@ -116,7 +116,7 @@ export function Navbar({ booted }: NavbarProps) {
                 scrolled && "scale-[0.85]"
               )}
             />
-            <span className="hidden font-condensed text-sm uppercase leading-none tracking-[0.28em] text-ink transition-colors duration-300 group-hover:text-lime-bright sm:inline sm:text-base md:text-lg">
+            <span className="font-condensed text-[0.7rem] uppercase leading-tight tracking-[0.16em] text-ink transition-colors duration-300 group-hover:text-lime-bright sm:text-base sm:leading-none sm:tracking-[0.28em] md:text-lg">
               {site.name}
             </span>
           </a>
