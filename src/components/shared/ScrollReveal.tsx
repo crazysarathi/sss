@@ -58,6 +58,9 @@ export function ScrollReveal({
         ease: "expo.out",
         stagger: staggerChildren ? stagger : 0,
         scrollTrigger: { trigger: el, start, once: true },
+        // Drop the inline transform when done so CSS hover transforms
+        // (e.g. hover:-translate-y-1 cards) work again.
+        clearProps: "transform",
       });
     },
     { scope: ref }

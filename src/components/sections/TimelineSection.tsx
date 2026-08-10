@@ -42,7 +42,7 @@ function EventCard({ item }: { item: EventItem }) {
   return (
     <GlassCard
       className={cn(
-        "relative w-full max-w-md overflow-hidden p-6 transition-transform duration-300 hover:-translate-y-1 md:p-8",
+        "relative w-full max-w-md overflow-hidden p-4 transition-transform duration-300 hover:-translate-y-1 sm:p-6 md:p-8",
         done && "opacity-80"
       )}
     >
@@ -54,29 +54,29 @@ function EventCard({ item }: { item: EventItem }) {
         />
       )}
 
-      <div className="relative flex items-start gap-6">
+      <div className="relative flex items-start gap-4 sm:gap-6">
         {/* Date block */}
         <div className="shrink-0 text-center">
           <div
             className={cn(
-              "font-display text-5xl leading-none",
+              "font-display text-3xl leading-none sm:text-5xl",
               done ? "text-lime" : "text-ink"
             )}
           >
             {item.day}
           </div>
-          <div className="mt-2 font-condensed text-sm uppercase tracking-[0.3em] text-ink-dim">
+          <div className="mt-2 font-condensed text-xs uppercase tracking-[0.3em] text-ink-soft sm:text-sm">
             {item.month}
           </div>
         </div>
 
         {/* Divider */}
-        <div aria-hidden="true" className="mt-1 h-16 w-px shrink-0 bg-line" />
+        <div aria-hidden="true" className="mt-1 hidden h-16 w-px shrink-0 bg-line sm:block" />
 
         {/* Copy */}
         <div className="min-w-0">
           <Badge variant={badgeVariant(item)}>{item.tag}</Badge>
-          <h3 className="mt-3 font-display text-xl uppercase leading-tight text-ink">
+          <h3 className="mt-3 font-display text-base uppercase leading-tight text-ink sm:text-xl">
             {item.title}
           </h3>
           <p className="mt-2 text-sm leading-relaxed text-ink-soft">{item.detail}</p>
@@ -123,7 +123,19 @@ export function TimelineSection() {
         });
         progress
           .fromTo(fill, { scaleY: 0 }, { scaleY: 1 }, 0)
-          .fromTo(marker, { y: 0 }, { y: () => list.offsetHeight - MARKER_SIZE }, 0);
+          .fromTo(marker, { y: 0 }, { y: () => list.offsetHeight - MARKER_SIZE }, 0)
+          // Physically-correct roll: one full turn per circumference of
+          // travel, scrubbed — so it back-spins when scrolling up.
+          .fromTo(
+            marker,
+            { rotation: 0 },
+            {
+              rotation: () =>
+                ((list.offsetHeight - MARKER_SIZE) / (Math.PI * MARKER_SIZE)) * 360,
+              transformOrigin: "50% 50%",
+            },
+            0
+          );
       }
 
       /* Cards reveal once, sliding in from their side. */
@@ -241,7 +253,7 @@ export function TimelineSection() {
                   <div
                     data-reveal
                     className={cn(
-                      "pl-12 md:row-start-1 md:pl-0",
+                      "pl-9 sm:pl-12 md:row-start-1 md:pl-0",
                       left
                         ? "md:col-start-1 md:justify-self-end"
                         : "md:col-start-3 md:justify-self-start"

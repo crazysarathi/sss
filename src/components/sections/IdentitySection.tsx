@@ -138,7 +138,9 @@ export function IdentitySection() {
 
   const reduced = usePrefersReducedMotion();
   const isDesktop = useMediaQuery("(min-width: 768px)");
-  const frameInView = useInViewport(frameRef);
+  // `reduced` gates whether the frame div renders at all — pass it as a
+  // dep so the observer attaches when the stage mounts mid-session.
+  const frameInView = useInViewport(frameRef, "200px", [reduced]);
 
   useGSAP(
     () => {
@@ -239,7 +241,7 @@ export function IdentitySection() {
   );
 
   return (
-    <section id="identity" ref={sectionRef} className="relative bg-night">
+    <section id="identity" ref={sectionRef} className="relative bg-night/50">
       {/* Atmosphere: a single royal glow behind the stage, near-black elsewhere */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden" aria-hidden="true">
         <div className="glow-spot left-1/2 top-[46%] h-[560px] w-[560px] -translate-x-1/2 bg-royal/20" />

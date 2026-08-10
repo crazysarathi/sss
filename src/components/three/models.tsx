@@ -3,9 +3,17 @@
  * Everything is generated at runtime — no external models or textures,
  * so the 3D layer costs zero network requests.
  */
-import { useMemo, useRef, type ReactNode } from "react";
+import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { useFrame } from "@react-three/fiber";
 import * as THREE from "three";
+
+/** Dispose prop-passed GL resources on unmount (R3F only auto-disposes JSX-declared ones). */
+function useDispose(...resources: Array<{ dispose(): void }>) {
+  useEffect(() => {
+    return () => resources.forEach((r) => r.dispose());
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, resources);
+}
 
 /* ------------------------------------------------------------------ */
 /* Brand palette (mirrors tailwind.config.ts)                          */
@@ -70,6 +78,7 @@ export function Pickleball({ radius = 1, holes = 26, ...props }: PickleballProps
       }),
     []
   );
+  useDispose(holeGeom, holeMat);
 
   return (
     <group {...props}>
@@ -173,6 +182,7 @@ export function Paddle({ scale = 1, ...props }: PaddleProps) {
   }, []);
 
   const sTexture = useMemo(() => makeSPatternTexture(), []);
+  useDispose(faceGeom, rimGeom, sTexture);
 
   return (
     <group scale={scale} {...props}>
@@ -212,52 +222,93 @@ export function Paddle({ scale = 1, ...props }: PaddleProps) {
 }
 
 /* ------------------------------------------------------------------ */
-/* Mountain — the hills of Salem, low-poly extruded ridge              */
+/* Mountain — the hills of Salem as a glowing low-poly terrain range   */
 /* ------------------------------------------------------------------ */
 
+/** Deterministic ridge height: layered sines shaped by a center bias. */
+function ridgeHeight(x: number, z: number): number {
+  const centerBias = Math.max(0, 1 - Math.abs(x) / 3.4);
+  const ridge =
+    Math.sin(x * 1.7 + 0.6) * 0.55 +
+    Math.sin(x * 3.9 + z * 1.3) * 0.28 +
+    Math.sin(x * 7.1 - z * 2.2) * 0.12;
+  const depthFade = 0.55 + 0.45 * Math.min(1, (z + 2.2) / 4);
+  return Math.max(0, (ridge + 0.75) * centerBias * depthFade) * 1.35;
+}
+
 interface MountainProps {
-  wireframe?: boolean;
   [key: string]: unknown;
 }
 
-export function Mountain({ wireframe = false, ...props }: MountainProps) {
-  const geom = useMemo(() => {
-    const shape = new THREE.Shape();
-    // Jagged Shevaroy-style ridge line
-    const ridge: Array<[number, number]> = [
-      [-2.4, 0], [-1.9, 0.55], [-1.5, 0.35], [-1.0, 1.1], [-0.55, 0.8],
-      [-0.1, 1.65], [0.4, 1.0], [0.85, 1.25], [1.35, 0.55], [1.8, 0.75],
-      [2.4, 0],
-    ];
-    shape.moveTo(ridge[0][0], ridge[0][1]);
-    ridge.slice(1).forEach(([x, y]) => shape.lineTo(x, y));
-    shape.closePath();
-    const g = new THREE.ExtrudeGeometry(shape, {
-      depth: 0.5,
-      bevelEnabled: true,
-      bevelThickness: 0.08,
-      bevelSize: 0.08,
-      bevelSegments: 1,
-    });
-    g.center();
-    return g;
+export function Mountain(props: MountainProps) {
+  const groupRef = useRef<THREE.Group>(null);
+
+  const { solidGeom, wireGeom } = useMemo(() => {
+    const make = () => {
+      const g = new THREE.PlaneGeometry(6.8, 4.4, 46, 26);
+      g.rotateX(-Math.PI / 2);
+      const pos = g.attributes.position as THREE.BufferAttribute;
+      for (let i = 0; i < pos.count; i++) {
+        const x = pos.getX(i);
+        const z = pos.getZ(i);
+        pos.setY(i, ridgeHeight(x, z));
+      }
+      pos.needsUpdate = true;
+      g.computeVertexNormals();
+      return g;
+    };
+    return { solidGeom: make(), wireGeom: make() };
   }, []);
+  useDispose(solidGeom, wireGeom);
+
+  // A slow "aurora" shimmer over the wireframe ridge.
+  const wireMat = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        color: BRAND.royalBright,
+        wireframe: true,
+        transparent: true,
+        opacity: 0.34,
+        blending: THREE.AdditiveBlending,
+        depthWrite: false,
+      }),
+    []
+  );
+  useDispose(wireMat);
+
+  useFrame(({ clock }) => {
+    const g = groupRef.current;
+    if (!g) return;
+    const t = clock.getElapsedTime();
+    wireMat.opacity = 0.26 + Math.sin(t * 0.8) * 0.1;
+    g.rotation.y = Math.sin(t * 0.12) * 0.06;
+  });
 
   return (
-    <group {...props}>
-      <mesh geometry={geom} castShadow>
+    <group ref={groupRef} {...props}>
+      {/* dark solid terrain body */}
+      <mesh geometry={solidGeom} position={[0, -1.05, 0]} rotation={[0.32, 0, 0]}>
         <meshStandardMaterial
-          color={BRAND.royal}
-          roughness={0.55}
-          metalness={0.1}
+          color={BRAND.royalDeep}
+          roughness={0.62}
+          metalness={0.15}
           flatShading
-          wireframe={wireframe}
         />
       </mesh>
-      {/* lime under-glow ridge echo */}
-      <mesh geometry={geom} position={[0.06, -0.08, -0.3]} scale={0.96}>
-        <meshBasicMaterial color={BRAND.lime} wireframe transparent opacity={0.16} />
+      {/* glowing wireframe skin floating just above the surface */}
+      <mesh
+        geometry={wireGeom}
+        material={wireMat}
+        position={[0, -1.02, 0]}
+        rotation={[0.32, 0, 0]}
+        scale={[1.001, 1.02, 1.001]}
+      />
+      {/* lime summit beacon on the tallest peak */}
+      <mesh position={[0.42, 1.06, -0.2]}>
+        <sphereGeometry args={[0.05, 12, 12]} />
+        <meshBasicMaterial color={BRAND.lime} />
       </mesh>
+      <pointLight position={[0.42, 1.3, 0.3]} intensity={0.7} color={BRAND.lime} distance={4} />
     </group>
   );
 }
@@ -292,6 +343,7 @@ interface SStormProps {
 export function SStorm({ count = 90, spread = 4, color = BRAND.lime, ...props }: SStormProps) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const texture = useMemo(() => makeSGlyphTexture(), []);
+  useDispose(texture);
   const dummy = useMemo(() => new THREE.Object3D(), []);
 
   const seeds = useMemo(

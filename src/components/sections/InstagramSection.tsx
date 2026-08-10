@@ -54,7 +54,7 @@ export function InstagramSection() {
       />
 
       <div data-reveal className="relative z-10">
-        <GlassCard tilt tiltMax={4} className="relative overflow-hidden p-10 text-center md:p-14">
+        <GlassCard tilt tiltMax={4} className="relative overflow-hidden p-6 text-center sm:p-10 md:p-14">
           <div
             aria-hidden="true"
             className="glow-spot left-1/2 -top-24 h-64 w-64 -translate-x-1/2 bg-[#8134af]/15"
@@ -98,8 +98,13 @@ export function InstagramSection() {
             </ScrollReveal>
 
             <div data-reveal className="mt-11">
-              <MagneticButton>
-                <Button variant="insta" size="lg" asChild>
+              <MagneticButton className="block w-full sm:inline-block sm:w-auto">
+                <Button
+                  variant="insta"
+                  size="lg"
+                  asChild
+                  className="h-auto min-h-12 w-full whitespace-normal px-5 py-3 text-sm leading-snug sm:w-auto sm:px-9 sm:text-base md:text-lg"
+                >
                   <a href={instagram.url} target="_blank" rel="noopener">
                     <Instagram aria-hidden="true" />
                     {instagram.cta}

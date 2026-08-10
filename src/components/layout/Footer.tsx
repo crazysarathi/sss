@@ -1,9 +1,8 @@
-import { ArrowUp, Instagram } from "lucide-react";
+import { Instagram } from "lucide-react";
 import { footer, site, INSTAGRAM_URL } from "@/data/siteData";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollReveal } from "@/components/shared/ScrollReveal";
-import { scrollToSection } from "@/lib/scroll";
 import crestLogo from "@/assets/logos/sss-logo-small.png";
 
 /**
@@ -49,9 +48,9 @@ export function Footer() {
 
         <Separator className="max-w-xs" />
 
-        <p className="text-sm text-ink-dim">{footer.copyright}</p>
+        <p className="text-sm text-ink-soft">{footer.copyright}</p>
 
-        <p className="text-sm text-ink-dim">
+        <p className="text-sm text-ink-soft">
           {footer.poweredByPrefix}{" "}
           <a
             href={site.poweredBy.url}
@@ -64,15 +63,6 @@ export function Footer() {
         </p>
       </ScrollReveal>
 
-      {/* Back to top */}
-      <button
-        type="button"
-        aria-label="Back to top"
-        onClick={() => scrollToSection("#hero")}
-        className="absolute bottom-6 right-6 z-20 flex h-11 w-11 items-center justify-center rounded-full border border-line bg-white/[0.03] text-ink-soft backdrop-blur-sm transition-all duration-300 hover:-translate-y-0.5 hover:border-lime/50 hover:text-lime md:bottom-auto md:top-6"
-      >
-        <ArrowUp className="h-5 w-5" aria-hidden="true" />
-      </button>
     </footer>
   );
 }

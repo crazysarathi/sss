@@ -158,7 +158,7 @@ export function CommunitySection() {
   return (
     <section id="community" ref={sectionRef} className="section-shell">
       <div data-reveal data-banner>
-        <GlassCard className="relative overflow-hidden bg-gradient-to-br from-night-700 via-royal-deep/25 to-night-800 p-10 text-center md:p-16">
+        <GlassCard className="relative overflow-hidden bg-gradient-to-br from-night-700 via-royal-deep/25 to-night-800 p-6 text-center sm:p-10 md:p-16">
           {/* Atmosphere */}
           <div aria-hidden="true" className="glow-spot -bottom-28 -left-24 h-80 w-80 bg-lime/15" />
           <div aria-hidden="true" className="glow-spot -right-20 -top-32 h-96 w-96 bg-royal/25" />

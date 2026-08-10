@@ -92,7 +92,32 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
     root.style.overflow = "hidden";
 
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "Escape") onClose();
+      if (e.key === "Escape") {
+        onClose();
+        return;
+      }
+      // Focus trap: keep Tab / Shift+Tab cycling inside the dialog —
+      // everything behind the overlay is visually hidden but not inert.
+      if (e.key === "Tab") {
+        const dialog = containerRef.current;
+        if (!dialog) return;
+        const focusables = Array.from(
+          dialog.querySelectorAll<HTMLElement>(
+            'a[href], button:not([disabled]), [tabindex]:not([tabindex="-1"])'
+          )
+        ).filter((el) => el.offsetParent !== null);
+        if (!focusables.length) return;
+        const first = focusables[0];
+        const last = focusables[focusables.length - 1];
+        const active = document.activeElement as HTMLElement | null;
+        if (e.shiftKey && (active === first || !dialog.contains(active))) {
+          e.preventDefault();
+          last.focus();
+        } else if (!e.shiftKey && (active === last || !dialog.contains(active))) {
+          e.preventDefault();
+          first.focus();
+        }
+      }
     };
     window.addEventListener("keydown", onKey);
 
@@ -131,7 +156,7 @@ export function MobileMenu({ open, onClose }: MobileMenuProps) {
       role="dialog"
       aria-modal="true"
       aria-label="Site menu"
-      className="fixed inset-0 z-[90] flex flex-col overflow-hidden bg-night lg:hidden"
+      className="fixed inset-0 z-[90] flex flex-col overflow-y-auto overflow-x-hidden bg-night lg:hidden"
     >
       {/* Atmosphere */}
       <div aria-hidden="true" className="absolute inset-0">

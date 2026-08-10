@@ -213,9 +213,16 @@ export function HeroSection({ booted }: HeroSectionProps) {
         ref={driftRef}
         className="relative z-10 flex w-full flex-col items-center justify-center self-stretch"
       >
-        {/* marquee ticker, just below the floating navbar */}
-        <div data-reveal data-hero-ticker className="absolute inset-x-0 top-20">
-          <Ticker text={hero.ticker} className="mask-fade-x" />
+        {/* marquee ticker — quiet brand strip along the hero's bottom edge */}
+        <div
+          data-reveal
+          data-hero-ticker
+          className="absolute inset-x-0 bottom-0 border-t border-line/60 bg-night-800/40 py-4 backdrop-blur-sm md:py-5"
+        >
+          <Ticker
+            text={hero.ticker}
+            className="mask-fade-x [&>div]:font-condensed [&>div]:text-base [&>div]:tracking-[0.3em] [&>div]:text-ink-soft md:[&>div]:text-xl"
+          />
         </div>
 
         <div
@@ -324,7 +331,7 @@ export function HeroSection({ booted }: HeroSectionProps) {
           data-reveal
           data-hero-scrollhint
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 bottom-7 flex flex-col items-center gap-3"
+          className="pointer-events-none absolute inset-x-0 bottom-[4.5rem] flex flex-col items-center gap-3"
         >
           <span className="font-condensed text-xs uppercase tracking-[0.4em] text-ink-dim">
             Scroll

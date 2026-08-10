@@ -108,12 +108,12 @@ export function Navbar({ booted }: NavbarProps) {
             <img
               src={navLogo}
               alt=""
-              width={44}
-              height={44}
+              width={56}
+              height={56}
               className={cn(
-                "h-11 w-11 object-contain drop-shadow-[0_0_18px_rgba(27,116,224,0.35)]",
+                "h-12 w-12 object-contain md:h-14 md:w-14",
                 "transition-transform duration-500",
-                scrolled && "scale-[0.82]"
+                scrolled && "scale-[0.85]"
               )}
             />
             <span className="hidden font-condensed text-sm uppercase leading-none tracking-[0.28em] text-ink transition-colors duration-300 group-hover:text-lime-bright sm:inline sm:text-base md:text-lg">

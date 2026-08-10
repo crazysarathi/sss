@@ -1,4 +1,4 @@
-import { useRef, useState, type FormEvent } from "react";
+import { useEffect, useRef, useState, type FormEvent } from "react";
 import {
   ArrowRight,
   CheckCircle2,
@@ -202,6 +202,18 @@ export function RegistrationSection() {
     });
   });
 
+  /* Keyboard focus follows the phase swap — the DOM the user was focused
+     in gets unmounted, which would otherwise drop focus to <body>.
+     Never runs before the first swap (would steal focus on page load). */
+  useEffect(() => {
+    if (!hasSwappedRef.current) return;
+    if (phase === "success") {
+      successRef.current?.focus({ preventScroll: true });
+    } else if (document.activeElement === document.body) {
+      nameRef.current?.focus({ preventScroll: true });
+    }
+  }, [phase]);
+
   /* ------------------------------------------------------------------ */
   /* Validation + submit.                                                */
   /* ------------------------------------------------------------------ */
@@ -264,7 +276,7 @@ export function RegistrationSection() {
               {/* ------------------------------------------------------ */}
               {/* LEFT — heading + venue facts + watermark               */}
               {/* ------------------------------------------------------ */}
-              <div className="relative z-10 overflow-hidden border-b border-line p-8 md:p-14 lg:border-b-0 lg:border-r">
+              <div className="relative z-10 overflow-hidden border-b border-line p-6 sm:p-8 md:p-14 lg:border-b-0 lg:border-r">
                 <SectionHeading
                   align="left"
                   kicker={join.kicker}
@@ -306,7 +318,7 @@ export function RegistrationSection() {
               {/* ------------------------------------------------------ */}
               {/* RIGHT — form / success                                 */}
               {/* ------------------------------------------------------ */}
-              <div ref={rightColRef} className="relative z-10 p-8 md:p-14">
+              <div ref={rightColRef} className="relative z-10 p-6 sm:p-8 md:p-14">
                 {phase === "form" ? (
                   <form
                     ref={formRef}
@@ -437,7 +449,8 @@ export function RegistrationSection() {
                   <div
                     ref={successRef}
                     role="status"
-                    className="flex h-full min-h-[24rem] flex-col items-center justify-center py-6 text-center"
+                    tabIndex={-1}
+                    className="flex h-full min-h-[24rem] flex-col items-center justify-center py-6 text-center outline-none"
                   >
                     <div
                       data-success-ring

@@ -29,6 +29,12 @@ export function CrestRevealSection() {
     prefersReducedMotion() ? "revealed" : "pre"
   );
 
+  // If the user enables reduced motion mid-session, settle the ceremony
+  // into its revealed state so nothing stays hidden behind animations.
+  useEffect(() => {
+    if (reduced) setPhase("revealed");
+  }, [reduced]);
+
   const sectionRef = useRef<HTMLElement>(null);
   const stageRef = useRef<HTMLDivElement>(null);
   const karthiRef = useRef<HTMLDivElement>(null);
@@ -56,7 +62,7 @@ export function CrestRevealSection() {
 
   const { contextSafe } = useGSAP(
     () => {
-      if (prefersReducedMotion()) return;
+      if (reduced) return;
 
       const emblemWrap = emblemWrapRef.current;
       const crest = crestRef.current;
@@ -81,15 +87,19 @@ export function CrestRevealSection() {
         return;
       }
 
-      // ----- initial states (JS-off / reduced-motion users never hit these)
+      // ----- initial states (JS-off / reduced-motion users never hit these).
+      // Skip the silhouette when the crest is already revealed — e.g. the
+      // user disabled reduced motion mid-session after loading revealed.
       gsap.set(emblemWrap, { transformPerspective: 900 });
-      gsap.set(crest, {
-        filter: SILHOUETTE,
-        scale: 0.92,
-        autoAlpha: 0.85,
-        transformOrigin: "50% 50%",
-      });
-      gsap.set([postTitle, postSub, replayWrap], { autoAlpha: 0 });
+      if (phase !== "revealed") {
+        gsap.set(crest, {
+          filter: SILHOUETTE,
+          scale: 0.92,
+          autoAlpha: 0.85,
+          transformOrigin: "50% 50%",
+        });
+        gsap.set([postTitle, postSub, replayWrap], { autoAlpha: 0 });
+      }
 
       rotXTo.current = gsap.quickTo(emblemWrap, "rotationX", {
         duration: 0.6,
@@ -150,7 +160,9 @@ export function CrestRevealSection() {
         }
       );
     },
-    { scope: sectionRef }
+    // Re-init when the OS motion preference flips; revert inline styles so
+    // reduced-motion users always get fully visible, static content.
+    { scope: sectionRef, dependencies: [reduced], revertOnUpdate: true }
   );
 
   const fireConfetti = () => {
@@ -418,7 +430,7 @@ export function CrestRevealSection() {
 
         <div className="grid items-center gap-10 md:grid-cols-[0.8fr_1.2fr]">
           {/* ——— Karthi, the unveiler ——— */}
-          <div ref={karthiRef} data-reveal className="order-2 md:order-1">
+          <div ref={karthiRef} data-reveal className="order-1">
             <GlassCard tilt className="group overflow-hidden">
               <div className="overflow-hidden">
                 <img
@@ -447,7 +459,7 @@ export function CrestRevealSection() {
           {/* ——— The ceremony stage ——— */}
           <div
             ref={stageRef}
-            className="relative order-1 flex flex-col items-center md:order-2"
+            className="relative order-2 flex flex-col items-center"
           >
             <div ref={emblemBlockRef} data-reveal className="relative">
               <div
@@ -561,7 +573,11 @@ export function CrestRevealSection() {
                 className={cn(
                   "absolute inset-0 z-10 flex items-center justify-center",
                   phase === "revealed" && "pointer-events-none",
-                  reduced && "hidden"
+                  // Hidden for reduced-motion users, and whenever the crest is
+                  // revealed without the ceremony having animated the button
+                  // away (mid-session motion-preference flips).
+                  (reduced || (phase === "revealed" && !startedRef.current)) &&
+                    "hidden"
                 )}
               >
                 <MagneticButton strength={0.3} className="relative">

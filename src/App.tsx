@@ -1,12 +1,14 @@
-import { useEffect, useState } from "react";
+import { useLayoutEffect, useEffect, useState } from "react";
 import { ScrollSmoother, ScrollTrigger } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
 import { LoadingScreen } from "@/components/layout/LoadingScreen";
 import { Navbar } from "@/components/layout/Navbar";
+import { BackToTop } from "@/components/layout/BackToTop";
 import { Footer } from "@/components/layout/Footer";
 import { NoiseOverlay } from "@/components/shared/NoiseOverlay";
+import { AmbientBackground } from "@/components/shared/AmbientBackground";
 import { Toaster } from "@/components/ui/sonner";
 
 import { HeroSection } from "@/components/sections/HeroSection";
@@ -21,10 +23,17 @@ import { RegistrationSection } from "@/components/sections/RegistrationSection";
 export default function App() {
   const [booted, setBooted] = useState(false);
   const isMobile = useIsMobile();
+  // Sections mount only after ScrollSmoother exists (or is not wanted):
+  // pins created before the smoother would use fixed positioning, which
+  // breaks inside the smoother's transformed wrapper and lets later
+  // sections scroll over pinned stages.
+  const [scrollReady, setScrollReady] = useState(false);
 
-  // Inertial smooth scrolling on fine pointers; native scroll on touch.
-  useEffect(() => {
-    if (prefersReducedMotion() || isMobile) return;
+  useLayoutEffect(() => {
+    if (prefersReducedMotion() || isMobile) {
+      setScrollReady(true);
+      return;
+    }
     const smoother = ScrollSmoother.create({
       wrapper: "#smooth-wrapper",
       content: "#smooth-content",
@@ -32,9 +41,13 @@ export default function App() {
       effects: true,
       smoothTouch: 0,
     });
+    setScrollReady(true);
     // Recalculate pin positions once fonts finish loading.
     document.fonts?.ready.then(() => ScrollTrigger.refresh());
-    return () => smoother.kill();
+    return () => {
+      smoother.kill();
+      setScrollReady(false);
+    };
   }, [isMobile]);
 
   useEffect(() => {
@@ -53,23 +66,30 @@ export default function App() {
 
       <LoadingScreen onComplete={() => setBooted(true)} />
       <Navbar booted={booted} />
+      {/* Fixed ambient light layer — painted behind #smooth-wrapper (DOM order) */}
+      <AmbientBackground />
 
       <div id="smooth-wrapper">
         <div id="smooth-content">
-          <main id="main-content">
-            <HeroSection booted={booted} />
-            <LeagueSection />
-            <CrestRevealSection />
-            <IdentitySection />
-            <TimelineSection />
-            <CommunitySection />
-            <InstagramSection />
-            <RegistrationSection />
-          </main>
-          <Footer />
+          {scrollReady && (
+            <>
+              <main id="main-content">
+                <HeroSection booted={booted} />
+                <LeagueSection />
+                <CrestRevealSection />
+                <IdentitySection />
+                <TimelineSection />
+                <CommunitySection />
+                <InstagramSection />
+                <RegistrationSection />
+              </main>
+              <Footer />
+            </>
+          )}
         </div>
       </div>
 
+      <BackToTop />
       <NoiseOverlay />
       <Toaster position="bottom-center" />
     </>
