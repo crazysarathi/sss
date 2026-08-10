@@ -1,0 +1,134 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    --ease-out-expo: cubic-bezier(0.16, 0.84, 0.44, 1);
+    --nav-height: 76px;
+  }
+
+  html {
+    scroll-behavior: smooth;
+    -webkit-text-size-adjust: 100%;
+  }
+
+  html,
+  body {
+    /* clip (not hidden): prevents stray absolute decor from widening the
+       mobile layout viewport without creating a scroll container */
+    overflow-x: clip;
+  }
+
+  body {
+    @apply bg-night text-ink font-body antialiased;
+  }
+
+  /* Visible focus for keyboard users */
+  :focus-visible {
+    outline: 2px solid theme("colors.lime.DEFAULT");
+    outline-offset: 3px;
+    border-radius: 4px;
+  }
+
+  ::selection {
+    background: theme("colors.lime.DEFAULT");
+    color: theme("colors.night.800");
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html {
+      scroll-behavior: auto;
+    }
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Glass panel — the standard SSS surface */
+  .glass-panel {
+    @apply rounded-lg border border-line bg-white/[0.045] backdrop-blur-md;
+  }
+
+  /* Section kicker label */
+  .kicker {
+    @apply font-condensed text-kicker uppercase text-lime;
+  }
+
+  /* Big display headline */
+  .display-title {
+    @apply font-display uppercase text-ink;
+  }
+
+  /* Soft radial glow spot, position with utilities */
+  .glow-spot {
+    @apply pointer-events-none absolute rounded-full blur-3xl;
+  }
+
+  /* Full-bleed section shell with consistent vertical rhythm */
+  .section-shell {
+    @apply relative mx-auto w-full max-w-[1240px] px-6 py-24 md:py-36;
+  }
+}
+
+@layer utilities {
+  .text-stroke-ink {
+    -webkit-text-stroke: 1.5px rgba(238, 244, 255, 0.28);
+    color: transparent;
+  }
+
+  .text-gradient-lime {
+    @apply bg-gradient-to-r from-lime to-lime-bright bg-clip-text text-transparent;
+  }
+
+  .text-gradient-blue {
+    @apply bg-gradient-to-r from-royal-bright via-royal to-royal-bright bg-clip-text text-transparent;
+  }
+
+  .mask-fade-x {
+    -webkit-mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+    mask-image: linear-gradient(90deg, transparent, black 12%, black 88%, transparent);
+  }
+
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Film-grain overlay (pure CSS noise via SVG data URI) */
+.noise-overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 80;
+  pointer-events: none;
+  opacity: 0.05;
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 180px 180px;
+}
+
+/* Ambient court backdrop lines */
+.court-backdrop {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: linear-gradient(rgba(146, 190, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(146, 190, 255, 0.045) 1px, transparent 1px);
+  background-size: 72px 72px;
+  -webkit-mask-image: radial-gradient(ellipse 90% 70% at 50% 40%, black 30%, transparent 75%);
+  mask-image: radial-gradient(ellipse 90% 70% at 50% 40%, black 30%, transparent 75%);
+}
+
+/* GSAP reveal helpers — elements start hidden, GSAP animates them in.
+   The `.gsap-ready` class is added on <html> once JS boots; without JS
+   (or before hydration) content stays fully visible. */
+.gsap-ready [data-reveal] {
+  visibility: hidden;
+}
