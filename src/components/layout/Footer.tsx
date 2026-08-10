@@ -1,5 +1,5 @@
 import { Instagram } from "lucide-react";
-import { footer, site, INSTAGRAM_URL } from "@/data/siteData";
+import { footer, INSTAGRAM_URL } from "@/data/siteData";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ScrollReveal } from "@/components/shared/ScrollReveal";
@@ -49,18 +49,6 @@ export function Footer() {
         <Separator className="max-w-xs" />
 
         <p className="text-sm text-ink-soft">{footer.copyright}</p>
-
-        <p className="text-sm text-ink-soft">
-          {footer.poweredByPrefix}{" "}
-          <a
-            href={site.poweredBy.url}
-            target="_blank"
-            rel="noopener"
-            className="text-ink-soft underline-offset-4 transition-colors hover:text-lime hover:underline"
-          >
-            <strong>{site.poweredBy.label}</strong>
-          </a>
-        </p>
       </ScrollReveal>
 
     </footer>

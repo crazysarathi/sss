@@ -606,6 +606,8 @@ export function CrestRevealSection() {
                   ref={crestRef}
                   src={crestLogo}
                   alt={CREST_ALT}
+                  loading="lazy"
+                  decoding="async"
                   draggable={false}
                   className="relative z-10 h-full w-full select-none object-contain drop-shadow-[0_24px_60px_rgba(5,13,31,0.7)]"
                 />

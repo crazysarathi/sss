@@ -116,20 +116,20 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
 
       tl
         // ---- stage lights up
-        .fromTo("[data-c-spot]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.8, ease: "power2.out" }, 0)
+        .fromTo("[data-c-spot]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.7, ease: "power2.out" }, 0)
         .fromTo(
           "[data-c-line]",
           { scaleX: 0 },
-          { scaleX: 1, duration: 0.9, ease: "power3.inOut", stagger: 0.12 },
-          0.1
+          { scaleX: 1, duration: 0.8, ease: "power3.inOut", stagger: 0.1 },
+          0.08
         )
         .fromTo(
           "[data-intro-sparkle]",
           { autoAlpha: 0, scale: 0.4 },
-          { autoAlpha: 0.8, scale: 1, duration: 0.8, stagger: 0.03, ease: "power2.out" },
-          0.15
+          { autoAlpha: 0.8, scale: 1, duration: 0.7, stagger: 0.025, ease: "power2.out" },
+          0.12
         )
-        .to("[data-intro-sparkle]", { y: -12, duration: 2.4, ease: "sine.inOut", stagger: 0.05 }, 0.4)
+        .to("[data-intro-sparkle]", { y: -12, duration: 2.2, ease: "sine.inOut", stagger: 0.04 }, 0.35)
 
         // ---- twin paddles swing in and cross (the crest X).
         // Centering lives in the GSAP transform (-50/-50) — Tailwind
@@ -137,14 +137,14 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
         .fromTo(
           "[data-c-pl]",
           { xPercent: -290, yPercent: -14, rotation: -80, autoAlpha: 0 },
-          { xPercent: -76, yPercent: -50, rotation: -24, autoAlpha: 1, duration: 0.85, ease: "back.out(1.4)" },
-          0.55
+          { xPercent: -76, yPercent: -50, rotation: -24, autoAlpha: 1, duration: 0.8, ease: "back.out(1.4)" },
+          0.4
         )
         .fromTo(
           "[data-c-pr]",
           { xPercent: 190, yPercent: -14, rotation: 80, autoAlpha: 0 },
-          { xPercent: -24, yPercent: -50, rotation: 24, autoAlpha: 1, duration: 0.85, ease: "back.out(1.4)" },
-          0.62
+          { xPercent: -24, yPercent: -50, rotation: 24, autoAlpha: 1, duration: 0.8, ease: "back.out(1.4)" },
+          0.46
         )
 
         // ---- the ball drops in and bounces at the cross
@@ -152,16 +152,16 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
           "[data-c-ball]",
           { xPercent: -50, yPercent: -50, y: "-58vh", autoAlpha: 1 },
           { y: 0, duration: 0.55, ease: "power2.in" },
-          1.15
+          0.95
         )
-        .to("[data-c-ball]", { scaleY: 0.78, scaleX: 1.16, duration: 0.09, ease: "power1.in" }, 1.7)
-        .to("[data-c-ball]", { scaleY: 1, scaleX: 1, y: -26, duration: 0.3, ease: "power2.out" }, 1.79)
-        .to("[data-c-ball]", { y: 0, duration: 0.28, ease: "bounce.out" }, 2.09)
+        .to("[data-c-ball]", { scaleY: 0.78, scaleX: 1.16, duration: 0.09, ease: "power1.in" }, 1.5)
+        .to("[data-c-ball]", { scaleY: 1, scaleX: 1, y: -26, duration: 0.3, ease: "power2.out" }, 1.59)
+        .to("[data-c-ball]", { y: 0, duration: 0.28, ease: "bounce.out" }, 1.89)
         .fromTo(
           "[data-c-ring]",
           { xPercent: -50, yPercent: -50, scale: 0.3, autoAlpha: 0.9 },
           { scale: 2.6, autoAlpha: 0, duration: 0.7, ease: "power2.out" },
-          1.7
+          1.5
         )
 
         // ---- flash: the parts become the crest
@@ -169,19 +169,19 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
           "[data-c-flash]",
           { autoAlpha: 0 },
           { autoAlpha: 0.85, duration: 0.16, ease: "power1.in" },
-          2.4
+          2.05
         )
-        .to("[data-c-flash]", { autoAlpha: 0, duration: 0.5, ease: "power2.out" }, 2.56)
+        .to("[data-c-flash]", { autoAlpha: 0, duration: 0.5, ease: "power2.out" }, 2.21)
         .to(
           "[data-c-parts]",
           { scale: 0.6, autoAlpha: 0, duration: 0.4, ease: "power2.inOut" },
-          2.42
+          2.07
         )
         .fromTo(
           "[data-intro-crest]",
           { scale: 0.55, autoAlpha: 0, rotation: -6 },
           { scale: 1, autoAlpha: 1, rotation: 0, duration: 0.9, ease: "elastic.out(1, 0.55)" },
-          2.52
+          2.15
         )
 
         // ---- the words
@@ -189,25 +189,25 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
           "[data-intro-kicker]",
           { autoAlpha: 0, letterSpacing: "0.6em" },
           { autoAlpha: 1, letterSpacing: "0.42em", duration: 0.7 },
-          2.75
+          2.35
         )
         .fromTo(
           split ? split.chars : "[data-intro-title]",
           { y: 110, rotateX: -32, transformOrigin: "50% 100%", transformPerspective: 600 },
           { y: 0, rotateX: 0, duration: 0.95, stagger: 0.03 },
-          2.9
+          2.5
         )
         .fromTo(
           "[data-intro-sweep]",
           { xPercent: -160 },
           { xPercent: 160, duration: 0.85, ease: "power2.inOut" },
-          3.45
+          2.95
         )
-        .fromTo("[data-intro-sub]", { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.6 }, 3.6)
-        .fromTo("[data-intro-hint]", { autoAlpha: 0 }, { autoAlpha: 0.55, duration: 0.5 }, 3.7)
+        .fromTo("[data-intro-sub]", { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.6 }, 3.05)
+        .fromTo("[data-intro-hint]", { autoAlpha: 0 }, { autoAlpha: 0.55, duration: 0.5 }, 3.15)
 
         // ---- EXIT: the stage parts like curtains
-        .addLabel("exit", 4.5)
+        .addLabel("exit", 3.8)
         .to("[data-intro-content]", { autoAlpha: 0, y: -30, duration: 0.4, ease: "power2.in" }, "exit")
         .to(["[data-intro-sparkle]", "[data-c-spot]", "[data-c-line]"], { autoAlpha: 0, duration: 0.3 }, "exit")
         .to("[data-intro-seam]", { autoAlpha: 1, duration: 0.25 }, "exit")

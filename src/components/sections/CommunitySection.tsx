@@ -200,13 +200,19 @@ export function CommunitySection() {
               <span className="text-gradient-lime">&amp;</span>
               {titlePost}
             </h2>
-            <div
-              data-reveal
-              data-item
-              className="mt-6 flex items-center justify-center gap-2.5 text-lg text-ink-soft"
-            >
-              <MapPin aria-hidden="true" className="h-5 w-5 shrink-0 text-royal-bright" />
-              <span>{community.venue}</span>
+            <div data-reveal data-item className="mt-6 flex justify-center">
+              <a
+                href={community.venueHref}
+                target="_blank"
+                rel="noopener"
+                aria-label={`${community.venue} — open in Google Maps`}
+                className="group inline-flex items-center gap-2.5 text-lg text-ink-soft transition-colors duration-300 hover:text-ink"
+              >
+                <MapPin className="h-5 w-5 shrink-0 text-lime" aria-hidden="true" />
+                <span className="underline decoration-line underline-offset-4 transition-colors duration-300 group-hover:decoration-lime">
+                  {community.venue}
+                </span>
+              </a>
             </div>
             <div data-reveal data-item className="mt-9 flex justify-center">
               <Badge variant="lime" className="px-5 py-2">

@@ -177,14 +177,21 @@ export function IdentitySection() {
           }
         );
 
-        // Short non-scrubbed swap between stories.
+        // Short non-scrubbed swap between stories. Targets ALL non-active
+        // panels (not just the previous one): killing a mid-flight swap on
+        // fast scrolls used to strand an old panel at partial opacity,
+        // leaving two stories overlapped on screen.
         let swapTl: gsap.core.Timeline | null = null;
-        const swapTo = (next: number, prev: number) => {
+        const swapTo = (next: number) => {
           swapTl?.kill();
+          const others = [
+            ...panels.filter((_, i) => i !== next),
+            ...nums.filter((_, i) => i !== next),
+          ];
           swapTl = gsap
             .timeline()
             .to(
-              [panels[prev], nums[prev]],
+              others,
               { autoAlpha: 0, y: -28, duration: 0.3, ease: "power2.in", overwrite: "auto" },
               0
             )
@@ -209,10 +216,9 @@ export function IdentitySection() {
             onUpdate: (self) => {
               const idx = Math.min(ITEM_COUNT - 1, Math.floor(self.progress * ITEM_COUNT));
               if (idx !== activeIndexRef.current) {
-                const prev = activeIndexRef.current;
                 activeIndexRef.current = idx;
                 setActiveIndex(idx);
-                swapTo(idx, prev);
+                swapTo(idx);
               }
             },
           },

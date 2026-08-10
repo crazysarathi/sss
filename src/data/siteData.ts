@@ -16,7 +16,6 @@ export const site = {
   leagueFull: "Tamil Nadu Pickleball Premier League",
   year: "2026",
   hashtag: "#SmashersAreHere",
-  poweredBy: { label: "botify.in", url: "https://botify.in" },
 } as const;
 
 export const navLinks = [
@@ -24,6 +23,7 @@ export const navLinks = [
   { label: "The Crest", href: "#reveal" },
   { label: "The Identity", href: "#identity" },
   { label: "Events", href: "#events" },
+  { label: "Moments", href: "#moments" },
 ] as const;
 
 export const hero = {
@@ -36,7 +36,6 @@ export const hero = {
   chips: ["Est. 2026", "Salem · Tamil Nadu", "Pickleball", "TNPPL Season 2"],
   ticker:
     "SALEM SUPER SMASHERS ✦ TNPPL SEASON 2 ✦ PICKLEBALL ✦ FOLLOW @SALEMSUPERSMASHERS ✦ ",
-  primaryCta: { label: "Follow us on Instagram", href: INSTAGRAM_URL },
   secondaryCta: { label: "Explore the Invite", href: "#tnppl" },
 } as const;
 
@@ -62,7 +61,13 @@ export const tnppl = {
   keyItems: [
     { icon: "gavel", title: "Player Auction", detail: "4 August 2026" },
     { icon: "trophy", title: "Season 2 Tournament", detail: "17 – 20 September 2026" },
-    { icon: "map-pin", title: "Venue", detail: "Express Avenue Mall, Central Atrium" },
+    {
+      icon: "map-pin",
+      title: "Venue",
+      detail: "Express Avenue Mall, Central Atrium",
+      /** Opens the venue in Google Maps. */
+      href: "https://www.google.com/maps/search/?api=1&query=Express+Avenue+Mall%2C+Royapettah%2C+Chennai",
+    },
   ],
 } as const;
 
@@ -118,8 +123,11 @@ export type IdentityItem = (typeof identity.items)[number];
 export const events = {
   kicker: "Road to Season 2",
   title: "Schedule of Events",
+  /** Label on the per-event "view moments" button in the timeline. */
+  momentsCta: "View Moments",
   items: [
     {
+      id: "logo-launch",
       day: "12",
       month: "JUL",
       title: "Official Logo Launch",
@@ -128,14 +136,16 @@ export const events = {
       status: "done" as const,
     },
     {
+      id: "player-auction",
       day: "04",
       month: "AUG",
       title: "TNPPL Player Auction",
       detail: "The Smashers squad takes shape",
-      tag: "Auction",
-      status: "upcoming" as const,
+      tag: "Done ✓",
+      status: "done" as const,
     },
     {
+      id: "season-2-tournament",
       day: "17–20",
       month: "SEP",
       title: "TNPPL Season 2 — Tournament",
@@ -148,10 +158,61 @@ export const events = {
 
 export type EventItem = (typeof events.items)[number];
 
+export const program = {
+  kicker: "Our Programs",
+  title: "Moments that made us",
+  lead: "Auction night, the squad reveal, front-page ink — relive the programs that carried Salem into Season 2.",
+  note: "More moments dropping all season — follow along on Instagram.",
+  /** Hyperlink under the gallery — opens the all-events moments page. */
+  viewAllCta: "View all moments",
+  items: [
+    {
+      key: "reveal",
+      tag: "Squad · 14/14",
+      title: "Team Reveal",
+      caption: "The full Season 2 roster, locked and loaded — openers to AB50s.",
+    },
+    {
+      key: "launch",
+      tag: "Chennai",
+      title: "League Launch",
+      caption: "TNPPL Season 2 takes the stage with TNPA, SDAT and Cavin's.",
+    },
+    {
+      key: "owners",
+      tag: "TNPPL · Season 2",
+      title: "Launch Night",
+      caption: "Franchise owners and league officials open the season together.",
+    },
+    {
+      key: "press",
+      tag: "Dinakaran · Pg 11",
+      title: "In The Press",
+      caption: "Salem's franchise makes the morning paper — 05.08.26.",
+    },
+    {
+      key: "crest",
+      tag: "12 · 07 · 2026",
+      title: "Crest Unveiling",
+      caption: "Actor Karthi reveals the crest that carries the city.",
+    },
+  ],
+  stats: [
+    { value: 14, suffix: "", label: "Players Signed" },
+    { value: 5, suffix: "+", label: "Programs Held" },
+    { value: 1, suffix: "", label: "City United" },
+  ],
+} as const;
+
+export type ProgramItem = (typeof program.items)[number];
+
 export const community = {
   kicker: "Community Event",
   title: "Pickle & Pilates",
   venue: "Forest Hills Country Club",
+  /** Opens the venue in Google Maps. */
+  venueHref:
+    "https://www.google.com/maps/search/?api=1&query=Forest+Hills+Country+Club%2C+Salem%2C+Tamil+Nadu",
   note: "Coming soon — dates will be announced soon",
 } as const;
 
@@ -169,7 +230,6 @@ export const join = {
   lead: "Register for tournament updates, squad news, and first access to the official jersey drop.",
   roles: [
     { value: "fan", label: "A fan / supporter" },
-    { value: "player", label: "A player" },
     { value: "sponsor", label: "A sponsor / partner" },
     { value: "volunteer", label: "A volunteer" },
   ],

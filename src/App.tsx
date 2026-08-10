@@ -1,5 +1,6 @@
-import { useLayoutEffect, useEffect, useState } from "react";
+import { lazy, Suspense, useCallback, useLayoutEffect, useEffect, useState } from "react";
 import { ScrollSmoother, ScrollTrigger } from "@/lib/gsap";
+import { scrollToSection } from "@/lib/scroll";
 import { prefersReducedMotion } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
@@ -9,14 +10,38 @@ import { BackToTop } from "@/components/layout/BackToTop";
 import { Footer } from "@/components/layout/Footer";
 import { NoiseOverlay } from "@/components/shared/NoiseOverlay";
 import { AmbientBackground } from "@/components/shared/AmbientBackground";
-import { LeagueInviteDialog } from "@/components/shared/LeagueInviteDialog";
+import { BallHandoff } from "@/components/shared/BallHandoff";
+import { BallJourney } from "@/components/shared/BallJourney";
 import { Toaster } from "@/components/ui/sonner";
+
+// Lazy: the dialog pulls in three.js via its 3D crest — a static import
+// would hoist the whole three ecosystem into the entry bundle.
+const LeagueInviteDialog = lazy(() =>
+  import("@/components/shared/LeagueInviteDialog").then((m) => ({
+    default: m.LeagueInviteDialog,
+  }))
+);
+
+// Lazy: the per-event moments wall (and its sample media) only loads when
+// a "View Moments" button is pressed or the page is deep-linked.
+const EventMomentsPage = lazy(() =>
+  import("@/components/pages/EventMomentsPage").then((m) => ({
+    default: m.EventMomentsPage,
+  }))
+);
+
+/** #/moments/<slug> — distinct from plain #section anchors. */
+const MOMENTS_ROUTE = /^#\/moments\/(.+)$/;
+
+const momentsSlugFromHash = () =>
+  window.location.hash.match(MOMENTS_ROUTE)?.[1] ?? null;
 
 import { HeroSection } from "@/components/sections/HeroSection";
 import { LeagueSection } from "@/components/sections/LeagueSection";
 import { CrestRevealSection } from "@/components/sections/CrestRevealSection";
 import { IdentitySection } from "@/components/sections/IdentitySection";
 import { TimelineSection } from "@/components/sections/TimelineSection";
+import { ProgramSection } from "@/components/sections/ProgramSection";
 import { CommunitySection } from "@/components/sections/CommunitySection";
 import { InstagramSection } from "@/components/sections/InstagramSection";
 import { RegistrationSection } from "@/components/sections/RegistrationSection";
@@ -29,6 +54,35 @@ export default function App() {
   // breaks inside the smoother's transformed wrapper and lets later
   // sections scroll over pinned stages.
   const [scrollReady, setScrollReady] = useState(false);
+  // Per-event moments overlay, driven by the #/moments/<slug> hash route
+  // so browser back/forward and deep links both work.
+  const [momentsSlug, setMomentsSlug] = useState<string | null>(momentsSlugFromHash);
+
+  useEffect(() => {
+    const onHashChange = () => setMomentsSlug(momentsSlugFromHash());
+    window.addEventListener("hashchange", onHashChange);
+    return () => window.removeEventListener("hashchange", onHashChange);
+  }, []);
+
+  // While the moments overlay is up, freeze the page behind it.
+  useEffect(() => {
+    if (!momentsSlug) return;
+    const smoother = ScrollSmoother.get();
+    smoother?.paused(true);
+    document.documentElement.style.overflow = "hidden";
+    return () => {
+      smoother?.paused(false);
+      document.documentElement.style.overflow = "";
+    };
+  }, [momentsSlug]);
+
+  const closeMoments = useCallback(() => {
+    // Clear the route without a native anchor jump, then settle back on
+    // the timeline the button lives in.
+    history.replaceState(null, "", window.location.pathname + window.location.search);
+    setMomentsSlug(null);
+    requestAnimationFrame(() => scrollToSection("#events"));
+  }, []);
 
   useLayoutEffect(() => {
     if (prefersReducedMotion() || isMobile) {
@@ -79,7 +133,10 @@ export default function App() {
                 <LeagueSection />
                 <CrestRevealSection />
                 <IdentitySection />
+                {/* pickleball served from the crest stage into the timeline */}
+                <BallHandoff />
                 <TimelineSection />
+                <ProgramSection />
                 <CommunitySection />
                 <InstagramSection />
                 <RegistrationSection />
@@ -90,10 +147,25 @@ export default function App() {
         </div>
       </div>
 
+      {/* The hero ball's site-long scrubbed flight — fixed layer, so it
+          must live outside the smoother's transformed content */}
+      {scrollReady && <BallJourney />}
       <BackToTop />
+      {/* Per-event moments wall — overlays the site, keeps scroll state below */}
+      {momentsSlug && (
+        <Suspense fallback={<div className="fixed inset-0 z-[92] bg-night" />}>
+          <EventMomentsPage slug={momentsSlug} onBack={closeMoments} />
+        </Suspense>
+      )}
       <NoiseOverlay />
-      {/* TNPPL invite — auto-opens once per session, a beat after boot */}
-      <LeagueInviteDialog booted={booted} />
+      {/* TNPPL invite — auto-opens once per session, a beat after boot.
+          Unmounted while the moments overlay is up so it can't pop over it
+          (its open-timer restarts once the visitor is back on the page). */}
+      {!momentsSlug && (
+        <Suspense fallback={null}>
+          <LeagueInviteDialog booted={booted} />
+        </Suspense>
+      )}
       <Toaster position="bottom-center" />
     </>
   );

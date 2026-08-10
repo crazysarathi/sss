@@ -126,6 +126,30 @@
   }
 }
 
+/* React Bits–style shiny text: dim lime base, bright sweep clipped to glyphs */
+.shiny-text {
+  display: inline-block;
+  color: rgba(203, 230, 110, 0.5);
+  background: linear-gradient(
+    120deg,
+    rgba(226, 245, 154, 0) 40%,
+    rgba(226, 245, 154, 0.95) 50%,
+    rgba(226, 245, 154, 0) 60%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  background-clip: text;
+  animation: shine 3.5s linear infinite;
+}
+@keyframes shine {
+  0% {
+    background-position: 100% 0;
+  }
+  100% {
+    background-position: -100% 0;
+  }
+}
+
 /* Film-grain overlay (pure CSS noise via SVG data URI) */
 .noise-overlay {
   position: fixed;

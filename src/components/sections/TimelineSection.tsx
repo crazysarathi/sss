@@ -1,17 +1,19 @@
 import { useRef } from "react";
-import { CheckCircle2 } from "lucide-react";
+import { ArrowUpRight, CheckCircle2, Images } from "lucide-react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { cn, prefersReducedMotion } from "@/lib/utils";
 import { events, type EventItem } from "@/data/siteData";
+import { eventMoments } from "@/data/momentsData";
+import { openEventMoments } from "@/lib/momentsNav";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { GlassCard } from "@/components/shared/GlassCard";
 import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
 
 const MARKER_SIZE = 28;
 
 function badgeVariant(item: EventItem): "lime" | "blue" | "outline" {
-  if (item.status === "done") return "lime";
-  return item.tag === "Auction" ? "blue" : "outline";
+  return item.status === "done" ? "lime" : "outline";
 }
 
 /** Inline pickleball: cream ball with five navy holes, riding the rail tip. */
@@ -110,7 +112,6 @@ export function TimelineSection() {
       const markerWrap = markerWrapRef.current;
       const marker = markerRef.current;
       if (fill && markerWrap && marker) {
-        gsap.set(markerWrap, { autoAlpha: 1 });
         const progress = gsap.timeline({
           defaults: { ease: "none" },
           scrollTrigger: {
@@ -122,6 +123,9 @@ export function TimelineSection() {
           },
         });
         progress
+          // marker appears with the scrub — after the handoff ball from the
+          // identity stage has landed and faded, so only one ball shows
+          .fromTo(markerWrap, { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.04 }, 0)
           .fromTo(fill, { scaleY: 0 }, { scaleY: 1 }, 0)
           .fromTo(marker, { y: 0 }, { y: () => list.offsetHeight - MARKER_SIZE }, 0)
           // Physically-correct roll: one full turn per circumference of
@@ -208,6 +212,7 @@ export function TimelineSection() {
           {/* Rail — left edge on mobile, center on md+ */}
           <div
             aria-hidden="true"
+            data-timeline-rail
             className="absolute inset-y-0 left-4 w-0.5 -translate-x-1/2 bg-line md:left-1/2"
           >
             <div
@@ -260,6 +265,26 @@ export function TimelineSection() {
                     )}
                   >
                     <EventCard item={item} />
+                    {/* Done events open their moments wall — button rides the
+                        card's outer corner: left cards left, right cards right */}
+                    {done && item.id in eventMoments && (
+                      <div
+                        className={cn(
+                          "mt-4 flex justify-start",
+                          !left && "md:justify-end"
+                        )}
+                      >
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => openEventMoments(item.id, left ? "left" : "right")}
+                        >
+                          <Images aria-hidden="true" />
+                          {events.momentsCta}
+                          <ArrowUpRight aria-hidden="true" />
+                        </Button>
+                      </div>
+                    )}
                   </div>
                 </li>
               );

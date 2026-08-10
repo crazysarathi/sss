@@ -52,24 +52,27 @@ export function AmbientBackground() {
       });
 
       journey
+        // Transform/opacity only: animating background-color here would
+        // repaint a ~60vmax blurred layer on every scrubbed frame, which
+        // is the single most expensive thing a scroll handler can do.
         // royal field: top-right → mid-left → low-right
         .to(
           "[data-amb-track='a']",
           {
             keyframes: [
-              { xPercent: -46, yPercent: 30, backgroundColor: "rgba(13,63,143,0.32)" },
-              { xPercent: -18, yPercent: 66, backgroundColor: "rgba(27,116,224,0.26)" },
+              { xPercent: -46, yPercent: 30 },
+              { xPercent: -18, yPercent: 66 },
             ],
           },
           0
         )
-        // deep field: bottom-left → upper-right, warms toward violet-blue
+        // deep field: bottom-left → upper-right
         .to(
           "[data-amb-track='b']",
           {
             keyframes: [
-              { xPercent: 40, yPercent: -34, backgroundColor: "rgba(27,116,224,0.2)" },
-              { xPercent: 16, yPercent: -60, backgroundColor: "rgba(79,160,255,0.16)" },
+              { xPercent: 40, yPercent: -34 },
+              { xPercent: 16, yPercent: -60 },
             ],
           },
           0

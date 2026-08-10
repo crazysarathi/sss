@@ -5,7 +5,10 @@
  * devices), ringed by ambient royal-blue dust and two faint paddle
  * silhouettes far behind. The rig leans toward the pointer, and the
  * hero's scrubbed ScrollTrigger feeds progress in through a shared
- * ref: the ball lifts away and the camera pushes in as you scroll.
+ * ref: on desktop the ball is thrown down-left across the screen with
+ * the scroll (BallJourney's twin continues the zigzag below the
+ * fold), on touch it lifts clear of the copy; the camera pushes in
+ * either way.
  *
  * Lazy-loaded by HeroSection; renders nothing network-fetched.
  */
@@ -35,7 +38,10 @@ interface HeroRigProps extends HeroSceneProps {
 
 const BASE_CAMERA_Z = 7;
 const CAMERA_PUSH = 1.2; // 7 → 5.8 across the hero scroll
-const BALL_LIFT = 2.5;
+const BALL_LIFT = 2.5; // coarse pointers: ball lifts away above the copy
+const BALL_DROP = 12; // fine pointers: ball falls out the hero's bottom edge…
+const BALL_THROW = -12; // …thrown hard across to the left as it goes…
+const BALL_ROLL = 3.6; // …rolling counter-clockwise, leftward (radians)
 const POINTER_YAW = 0.12;
 const POINTER_PITCH = 0.07;
 
@@ -72,14 +78,30 @@ function HeroRig({ scrollProgress, coarse, reduced }: HeroRigProps) {
     rig.rotation.y = THREE.MathUtils.damp(rig.rotation.y, pointer.x * POINTER_YAW, 3.2, delta);
     rig.rotation.x = THREE.MathUtils.damp(rig.rotation.x, pointer.y * POINTER_PITCH, 3.2, delta);
 
-    // Baseline spin + scroll-driven lift.
+    // Baseline spin + scroll-driven exit: desktop throws the ball down
+    // and across to the left with the scroll (BallJourney continues the
+    // zigzag below the fold); touch layouts lift it clear of the copy.
     ball.rotation.y += delta * 0.25;
     ball.position.y = THREE.MathUtils.damp(
       ball.position.y,
-      ballPos[1] + progress * BALL_LIFT,
+      coarse ? ballPos[1] + progress * BALL_LIFT : ballPos[1] - progress * BALL_DROP,
       4,
       delta
     );
+    if (!coarse) {
+      ball.position.x = THREE.MathUtils.damp(
+        ball.position.x,
+        ballPos[0] + progress * BALL_THROW,
+        4,
+        delta
+      );
+      ball.rotation.z = THREE.MathUtils.damp(
+        ball.rotation.z,
+        progress * BALL_ROLL,
+        4,
+        delta
+      );
+    }
 
     // Camera pushes in as the hero scrolls away.
     state.camera.position.z = THREE.MathUtils.damp(

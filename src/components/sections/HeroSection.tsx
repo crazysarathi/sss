@@ -10,14 +10,13 @@
  * feeding progress into the 3D scene through a shared ref.
  */
 import { lazy, Suspense, useRef } from "react";
-import { ArrowDown, Instagram } from "lucide-react";
+import { ArrowDown } from "lucide-react";
 import { gsap, ScrollTrigger, SplitText, useGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/utils";
 import { scrollToSection } from "@/lib/scroll";
 import { hero, site } from "@/data/siteData";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { MagneticButton } from "@/components/shared/MagneticButton";
 import { Ticker } from "@/components/shared/Ticker";
 
 const HeroScene = lazy(() => import("@/components/three/HeroScene"));
@@ -217,7 +216,9 @@ export function HeroSection({ booted }: HeroSectionProps) {
         <div
           data-reveal
           data-hero-ticker
-          className="absolute inset-x-0 bottom-0 border-t border-line/60 bg-night-800/40 py-4 backdrop-blur-sm md:py-5"
+          // No backdrop-blur here: it sits over the always-rendering 3D
+          // canvas, so the blur would be recomputed every animation frame.
+          className="absolute inset-x-0 bottom-0 border-t border-line/60 bg-night-800/70 py-4 md:py-5"
         >
           <Ticker
             text={hero.ticker}
@@ -306,14 +307,7 @@ export function HeroSection({ booted }: HeroSectionProps) {
             data-hero-ctas
             className="mt-10 flex w-full max-w-md flex-col items-stretch justify-center gap-4 sm:w-auto sm:max-w-none sm:flex-row sm:items-center"
           >
-            <MagneticButton className="w-full sm:w-auto">
-              <Button variant="insta" size="lg" asChild className="w-full sm:w-auto">
-                <a href={hero.primaryCta.href} target="_blank" rel="noopener">
-                  <Instagram aria-hidden="true" />
-                  {hero.primaryCta.label}
-                </a>
-              </Button>
-            </MagneticButton>
+           
             <Button
               variant="ghost"
               size="lg"

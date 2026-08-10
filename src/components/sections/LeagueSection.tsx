@@ -1,7 +1,7 @@
 import { Fragment, useRef } from "react";
-import { Gavel, Trophy, MapPin, type LucideIcon } from "lucide-react";
+import { ArrowUpRight, Gavel, Trophy, MapPin, type LucideIcon } from "lucide-react";
 import { gsap, useGSAP } from "@/lib/gsap";
-import { prefersReducedMotion } from "@/lib/utils";
+import { cn, prefersReducedMotion } from "@/lib/utils";
 import { liveStrip, tnppl } from "@/data/siteData";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { GlassCard } from "@/components/shared/GlassCard";
@@ -184,6 +184,8 @@ export function LeagueSection() {
                 data-logo-float
                 src={tnpplLogo}
                 alt="Tamil Nadu Pickleball Premier League — TNPPL official logo"
+                loading="lazy"
+                decoding="async"
                 className="relative z-10 w-48 max-w-[75%] rounded-lg shadow-glow-blue drop-shadow-[0_12px_30px_rgba(5,13,31,0.6)] md:w-56"
               />
             </div>
@@ -222,10 +224,13 @@ export function LeagueSection() {
           >
             {tnppl.keyItems.map((item) => {
               const Icon = KEY_ICONS[item.icon];
-              return (
+              const href = "href" in item ? item.href : undefined;
+              const card = (
                 <GlassCard
-                  key={item.title}
-                  className="flex items-center gap-5 p-6 transition-[transform,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-royal-bright/40"
+                  className={cn(
+                    "flex h-full items-center gap-5 p-6 transition-[transform,border-color] duration-300 ease-out hover:-translate-y-1 hover:border-royal-bright/40",
+                    href && "group-hover:-translate-y-1 group-hover:border-lime/40"
+                  )}
                 >
                   <span className="shrink-0 rounded-full border border-line bg-white/[0.03] p-3 text-lime">
                     <Icon className="h-5 w-5" aria-hidden="true" />
@@ -236,7 +241,27 @@ export function LeagueSection() {
                     </h4>
                     <p className="mt-1 text-sm text-ink-soft">{item.detail}</p>
                   </div>
+                  {href && (
+                    <ArrowUpRight
+                      aria-hidden="true"
+                      className="ml-auto h-4 w-4 shrink-0 text-ink-dim transition-colors duration-300 group-hover:text-lime"
+                    />
+                  )}
                 </GlassCard>
+              );
+              return href ? (
+                <a
+                  key={item.title}
+                  href={href}
+                  target="_blank"
+                  rel="noopener"
+                  aria-label={`${item.title}: ${item.detail} — open in Google Maps`}
+                  className="group block rounded-lg focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+                >
+                  {card}
+                </a>
+              ) : (
+                <div key={item.title}>{card}</div>
               );
             })}
           </ScrollReveal>
