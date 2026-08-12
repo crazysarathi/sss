@@ -1,6 +1,7 @@
 import { lazy, Suspense, useRef, useState } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/utils";
+import { sfx } from "@/lib/sound";
 
 // Lazy: pulls in the shared three.js models chunk (already loaded by the
 // hero scene) — mounted only once the desktop gate below passes.
@@ -32,13 +33,82 @@ const IDLE_HIDE_MS = 3200;
 export function BallJourney() {
   const rootRef = useRef<HTMLDivElement>(null);
   const ballRef = useRef<HTMLDivElement>(null);
+  const dragRef = useRef<HTMLDivElement>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
   // Scrubbed roll angle, shared with the 3D scene (tweened as an object
   // so GSAP can drive it like any other target).
   const rollRef = useRef({ z: 0 });
+  // Catch-and-carry: the visitor can grab the ball and put it anywhere.
+  // The offset lives on dragRef — BETWEEN the scrubbed flight (ballRef)
+  // and the idle-hide fader (fadeRef) — so neither behavior is disturbed
+  // and the drop position persists on top of the flight path.
+  const dragState = useRef({
+    active: false,
+    startX: 0,
+    startY: 0,
+    baseX: 0,
+    baseY: 0,
+    x: 0,
+    y: 0,
+    lastX: 0,
+  });
+  const draggingRef = useRef(false);
   // The canvas only mounts once the desktop gate passes — never on
   // touch/mobile/reduced-motion, where the effect doesn't run at all.
   const [active, setActive] = useState(false);
+
+  const onGrab = (e: React.PointerEvent<HTMLDivElement>) => {
+    if (e.pointerType === "mouse" && e.button !== 0) return;
+    const s = dragState.current;
+    s.active = true;
+    draggingRef.current = true;
+    s.startX = e.clientX;
+    s.startY = e.clientY;
+    s.lastX = e.clientX;
+    e.currentTarget.setPointerCapture(e.pointerId);
+    if (dragRef.current) {
+      // grabbing mid-return: stop the glide and pick up from where the
+      // ball actually is right now
+      gsap.killTweensOf(dragRef.current, "x,y");
+      s.baseX = Number(gsap.getProperty(dragRef.current, "x")) || 0;
+      s.baseY = Number(gsap.getProperty(dragRef.current, "y")) || 0;
+      gsap.to(dragRef.current, { scale: 1.07, duration: 0.25, ease: "back.out(2)" });
+    } else {
+      s.baseX = s.x;
+      s.baseY = s.y;
+    }
+    // grabbing an idle-faded ball wakes it up in hand
+    if (fadeRef.current) {
+      gsap.to(fadeRef.current, { autoAlpha: 1, duration: 0.2, overwrite: "auto" });
+    }
+    sfx.pop();
+  };
+
+  const onDrag = (e: React.PointerEvent<HTMLDivElement>) => {
+    const s = dragState.current;
+    if (!s.active) return;
+    s.x = s.baseX + e.clientX - s.startX;
+    s.y = s.baseY + e.clientY - s.startY;
+    if (dragRef.current) gsap.set(dragRef.current, { x: s.x, y: s.y });
+    // the ball rolls in hand as it's pulled sideways
+    rollRef.current.z -= (e.clientX - s.lastX) * 0.006;
+    s.lastX = e.clientX;
+  };
+
+  const onRelease = () => {
+    const s = dragState.current;
+    if (!s.active) return;
+    s.active = false;
+    draggingRef.current = false;
+    // it sets exactly where it was dropped — just a settle squash
+    if (dragRef.current) {
+      gsap
+        .timeline()
+        .to(dragRef.current, { scale: 0.94, duration: 0.09, ease: "power2.in" })
+        .to(dragRef.current, { scale: 1, duration: 0.45, ease: "elastic.out(1.1, 0.5)" });
+    }
+    sfx.bounce(0.6);
+  };
 
   useGSAP(
     () => {
@@ -176,16 +246,33 @@ export function BallJourney() {
       // fights the legs' own enter/exit alpha tweens.
       let idleTimer: number | undefined;
       let hidden = false;
+      const armIdle = () => {
+        window.clearTimeout(idleTimer);
+        idleTimer = window.setTimeout(() => {
+          // never fade the ball out of the visitor's hand mid-drag
+          if (draggingRef.current) {
+            armIdle();
+            return;
+          }
+          hidden = true;
+          gsap.to(fade, { autoAlpha: 0, duration: 0.6, overwrite: "auto" });
+        }, IDLE_HIDE_MS);
+      };
       const onScroll = () => {
         if (hidden) {
           hidden = false;
           gsap.to(fade, { autoAlpha: 1, duration: 0.3, overwrite: "auto" });
         }
-        window.clearTimeout(idleTimer);
-        idleTimer = window.setTimeout(() => {
-          hidden = true;
-          gsap.to(fade, { autoAlpha: 0, duration: 0.6, overwrite: "auto" });
-        }, IDLE_HIDE_MS);
+        armIdle();
+        // scrolling sends a hand-placed ball gliding back onto its
+        // choreographed flight path (never while it's still held)
+        const s = dragState.current;
+        const drag = dragRef.current;
+        if (drag && !s.active && (s.x !== 0 || s.y !== 0)) {
+          s.x = 0;
+          s.y = 0;
+          gsap.to(drag, { x: 0, y: 0, duration: 0.7, ease: "power3.out", overwrite: "auto" });
+        }
       };
       onScroll();
       window.addEventListener("scroll", onScroll, { passive: true });
@@ -208,11 +295,25 @@ export function BallJourney() {
         ref={ballRef}
         className="absolute left-0 top-0 aspect-square w-[clamp(230px,23vw,390px)] opacity-0 will-change-transform"
       >
-        <div ref={fadeRef} className="h-full w-full">
+        <div ref={dragRef} className="h-full w-full will-change-transform">
+          <div ref={fadeRef} className="h-full w-full">
+            {active && (
+              <Suspense fallback={null}>
+                <RollBallScene roll={rollRef} />
+              </Suspense>
+            )}
+          </div>
+          {/* grab zone — catch the ball, drag it anywhere, and it stays
+              where you drop it (round, so clicks beside the ball pass
+              through to the page) */}
           {active && (
-            <Suspense fallback={null}>
-              <RollBallScene roll={rollRef} />
-            </Suspense>
+            <div
+              onPointerDown={onGrab}
+              onPointerMove={onDrag}
+              onPointerUp={onRelease}
+              onPointerCancel={onRelease}
+              className="pointer-events-auto absolute inset-[12%] cursor-grab touch-none rounded-full active:cursor-grabbing"
+            />
           )}
         </div>
       </div>

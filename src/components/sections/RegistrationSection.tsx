@@ -11,6 +11,7 @@ import {
 import { toast } from "sonner";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/utils";
+import { sfx } from "@/lib/sound";
 import { join } from "@/data/siteData";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { GlassCard } from "@/components/shared/GlassCard";
@@ -169,6 +170,7 @@ export function RegistrationSection() {
   /* ------------------------------------------------------------------ */
   const swapToSuccess = contextSafe(() => {
     hasSwappedRef.current = true;
+    sfx.chime();
     if (prefersReducedMotion() || !formRef.current) {
       setPhase("success");
       return;

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowUp } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { scrollToSection } from "@/lib/scroll";
+import { sfx } from "@/lib/sound";
 
 const RADIUS = 21;
 const CIRCUMFERENCE = 2 * Math.PI * RADIUS;
@@ -47,7 +48,10 @@ export function BackToTop() {
     <button
       type="button"
       aria-label="Back to top"
-      onClick={() => scrollToSection("#hero")}
+      onClick={() => {
+        sfx.whoosh(0.4, "up");
+        scrollToSection("#hero");
+      }}
       className={cn(
         "fixed bottom-6 right-6 z-[60] flex h-12 w-12 items-center justify-center rounded-full",
         "border border-line bg-night-700/85 text-ink-soft backdrop-blur-md shadow-card-deep",

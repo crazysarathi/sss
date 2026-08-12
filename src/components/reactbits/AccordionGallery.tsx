@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { Maximize2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { sfx } from "@/lib/sound";
 
 export interface AccordionGalleryItem {
   src: string;
@@ -28,6 +29,18 @@ interface AccordionGalleryProps {
  */
 export function AccordionGallery({ items, onView, className }: AccordionGalleryProps) {
   const [active, setActive] = useState(0);
+  // Ref mirror of `active`: a tap fires focus then click before React
+  // re-renders, so guarding on state alone would double-blip.
+  const activeRef = useRef(0);
+
+  // One blip per panel change — hover, focus and tap all funnel through
+  // here, so switching panels never double-fires.
+  const activate = (i: number) => {
+    if (i === activeRef.current) return;
+    activeRef.current = i;
+    sfx.hover();
+    setActive(i);
+  };
 
   return (
     <div
@@ -50,9 +63,9 @@ export function AccordionGallery({ items, onView, className }: AccordionGalleryP
             }
             // First click/tap expands; a click on the expanded panel opens
             // the viewer (on desktop hover has already expanded it).
-            onClick={() => (isActive ? onView?.(item, i) : setActive(i))}
-            onMouseEnter={() => setActive(i)}
-            onFocus={() => setActive(i)}
+            onClick={() => (isActive ? onView?.(item, i) : activate(i))}
+            onMouseEnter={() => activate(i)}
+            onFocus={() => activate(i)}
             className={cn(
               "group relative min-h-0 overflow-hidden rounded-lg border text-left",
               "transition-[flex-grow,border-color] duration-700 ease-[cubic-bezier(0.16,0.84,0.44,1)]",

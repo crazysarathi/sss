@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { createPortal } from "react-dom";
 import { ChevronRight, RotateCcw } from "lucide-react";
 import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import { cn, prefersReducedMotion } from "@/lib/utils";
@@ -6,6 +7,7 @@ import { usePrefersReducedMotion } from "@/hooks/usePrefersReducedMotion";
 import { crestReveal } from "@/data/siteData";
 import { burstConfetti } from "@/lib/confetti";
 import { requestLeagueInvite } from "@/lib/leagueInvite";
+import { sfx } from "@/lib/sound";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { GlassCard } from "@/components/shared/GlassCard";
 import { Button } from "@/components/ui/button";
@@ -58,7 +60,7 @@ export function CrestRevealSection() {
   const replayWrapRef = useRef<HTMLDivElement>(null);
 
   const tlRef = useRef<gsap.core.Timeline | null>(null);
-  const slideRef = useRef({ active: false, x: 0, max: 1, grabDX: 0 });
+  const slideRef = useRef({ active: false, x: 0, max: 1, grabDX: 0, lastTickX: 0 });
   const springTweenRef = useRef<gsap.core.Tween | null>(null);
   const splitRef = useRef<SplitText | null>(null);
   const sheenTweenRef = useRef<gsap.core.Tween | null>(null);
@@ -178,7 +180,8 @@ export function CrestRevealSection() {
     const canvas = canvasRef.current;
     if (!canvas) return;
     confettiCleanupRef.current?.();
-    confettiCleanupRef.current = burstConfetti(canvas, 160);
+    // full-viewport cannons — the celebration takes the whole page
+    confettiCleanupRef.current = burstConfetti(canvas, 240);
   };
 
   /** Builds + plays the ceremony. "initial" collapses the tap button first;
@@ -297,6 +300,8 @@ export function CrestRevealSection() {
       const FLIGHT = 0.57; // impact lands on the flash at t0 + 0.75
 
       tl.set(ball, { x: sx, y: sy, autoAlpha: 1, rotation: 0, scale: 0.85 }, T)
+        // strike + rising flight, timed to the launch
+        .call(() => sfx.serve(), [], T)
         .to(ball, { x: ex, duration: FLIGHT, ease: "none" }, T)
         .to(ball, { y: peakY, duration: FLIGHT * 0.55, ease: "power2.out" }, T)
         .to(ball, { y: ey, duration: FLIGHT * 0.45, ease: "power2.in" }, T + FLIGHT * 0.55)
@@ -324,6 +329,8 @@ export function CrestRevealSection() {
         t0 + 0.35
       )
       .to(veil, { autoAlpha: 0, duration: 0.25, ease: "power1.out" }, t0 + 0.7)
+      // the ball smashes home exactly on the flash
+      .call(() => sfx.smash(), [], t0 + 0.74)
       // 4 — the flash
       .fromTo(
         flash,
@@ -358,8 +365,10 @@ export function CrestRevealSection() {
         },
         t0 + 0.9
       )
-      // 7 — confetti cannons
+      // 7 — confetti cannons + the crowd on its feet
       .call(fireConfetti, undefined, t0 + 0.95)
+      .call(() => sfx.cheer(), [], t0 + 0.95)
+      .call(() => sfx.fanfare(), [], t0 + 1.4)
       // 8 — rays and ring ease into a steady glow, beams settle
       .to(
         [rays, pulseRing],
@@ -418,6 +427,7 @@ export function CrestRevealSection() {
     if (startedRef.current) return;
     const s = slideRef.current;
     s.active = false;
+    sfx.whoosh(0.3, "up"); // the ball zips off the end of the track
     springTweenRef.current?.kill();
     springTweenRef.current = gsap.to(s, {
       x: s.max,
@@ -438,6 +448,7 @@ export function CrestRevealSection() {
     springTweenRef.current?.kill();
     s.max = track.clientWidth - ball.offsetWidth - BALL_PAD * 2;
     s.grabDX = e.clientX - s.x;
+    s.lastTickX = s.x;
     s.active = true;
     ball.setPointerCapture(e.pointerId);
   };
@@ -447,6 +458,13 @@ export function CrestRevealSection() {
     if (!s.active) return;
     s.x = Math.min(Math.max(e.clientX - s.grabDX, 0), s.max);
     applySlide(s.x);
+    // ratchet ticks as the ball rolls forward, rising in pitch
+    if (s.x - s.lastTickX > 26) {
+      s.lastTickX = s.x;
+      sfx.tick(s.max > 0 ? s.x / s.max : 0);
+    } else if (s.x < s.lastTickX) {
+      s.lastTickX = s.x;
+    }
     if (s.x >= s.max - 1) completeSlide();
   };
 
@@ -638,16 +656,6 @@ export function CrestRevealSection() {
                   />
                 ))}
 
-                {/* reveal flash */}
-                <div
-                  ref={flashRef}
-                  aria-hidden="true"
-                  className="pointer-events-none absolute -inset-12 z-30 rounded-full opacity-0"
-                  style={{
-                    background:
-                      "radial-gradient(circle, rgba(255,255,255,0.95) 0%, rgba(203,230,110,0.55) 38%, transparent 72%)",
-                  }}
-                />
               </div>
             </div>
 
@@ -795,20 +803,32 @@ export function CrestRevealSection() {
               </svg>
             </div>
 
-            {/* dim veil + confetti canvas over the whole stage column */}
-            <div
-              ref={veilRef}
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 z-20 bg-night opacity-0"
-            />
-            <canvas
-              ref={canvasRef}
-              aria-hidden="true"
-              className="pointer-events-none absolute inset-0 z-30 h-full w-full"
-            />
           </div>
         </div>
       </div>
+
+      {/* Ceremony overlay — dim veil, reveal flash and confetti across the
+          WHOLE page (like the original site). Portaled to <body>: inside
+          the ScrollSmoother's transformed content, position:fixed would
+          not stick to the viewport. */}
+      {createPortal(
+        <div
+          aria-hidden="true"
+          className="pointer-events-none fixed inset-0 z-[85]"
+        >
+          <div ref={veilRef} className="absolute inset-0 bg-night opacity-0" />
+          <div
+            ref={flashRef}
+            className="absolute inset-0 opacity-0"
+            style={{
+              background:
+                "radial-gradient(circle at 50% 45%, rgba(255,255,245,0.95) 0%, rgba(203,230,110,0.5) 32%, rgba(255,255,245,0.12) 55%, transparent 78%)",
+            }}
+          />
+          <canvas ref={canvasRef} className="absolute inset-0 h-full w-full" />
+        </div>,
+        document.body
+      )}
     </section>
   );
 }

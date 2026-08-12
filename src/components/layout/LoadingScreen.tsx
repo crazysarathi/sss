@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { gsap, SplitText, useGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/utils";
+import { sfx, startMusic } from "@/lib/sound";
 import { site } from "@/data/siteData";
 import crestLogo from "@/assets/logos/sss-logo-small.png";
 
@@ -105,7 +106,13 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
       const title = el.querySelector<HTMLElement>("[data-intro-title]");
       const split = title ? new SplitText(title, { type: "chars,words" }) : null;
 
+      // While the entry gate is up, the ceremony stage stays dark: the
+      // timeline waits paused and pre-lit elements are hidden by hand.
+      gsap.set("[data-intro-content]", { autoAlpha: 0 });
+      gsap.set("[data-c-line]", { scaleX: 0 });
+
       const tl = gsap.timeline({
+        paused: true,
         defaults: { ease: "expo.out" },
         onComplete: () => {
           unlock();
@@ -115,6 +122,7 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
       });
 
       tl
+        .set("[data-intro-content]", { autoAlpha: 1 }, 0)
         // ---- stage lights up
         .fromTo("[data-c-spot]", { autoAlpha: 0 }, { autoAlpha: 1, duration: 0.7, ease: "power2.out" }, 0)
         .fromTo(
@@ -204,7 +212,6 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
           2.95
         )
         .fromTo("[data-intro-sub]", { autoAlpha: 0, y: 18 }, { autoAlpha: 1, y: 0, duration: 0.6 }, 3.05)
-        .fromTo("[data-intro-hint]", { autoAlpha: 0 }, { autoAlpha: 0.55, duration: 0.5 }, 3.15)
 
         // ---- EXIT: the stage parts like curtains
         .addLabel("exit", 3.8)
@@ -217,18 +224,108 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
         .to("[data-intro-seam]", { autoAlpha: 0, duration: 0.4 }, "exit+=0.5")
         .set(el, { pointerEvents: "none" }, "exit+=0.3");
 
-      // Skip: click/tap, Enter or Escape jumps straight to the exit.
-      const skip = () => {
-        if (tl.progress() < 1 && tl.time() < tl.labels.exit) tl.play("exit");
+      // ---- sound cues, riding the same timeline. Silent no-ops until the
+      // first tap unlocks audio; skipped entirely when the user jumps to
+      // "exit" (play() seeks with events suppressed).
+      tl.call(() => sfx.whoosh(0.6, "up"), [], 0.1) // stage lights + court lines
+        .call(() => sfx.swish(), [], 0.42) // left paddle swings in
+        .call(() => sfx.swish(), [], 0.5) // right paddle answers
+        .call(() => sfx.bounce(1), [], 1.5) // the ball lands
+        .call(() => sfx.bounce(0.45), [], 1.92) // settle bounce
+        .call(() => sfx.smash(), [], 2.05) // flash — parts become the crest
+        .call(() => sfx.fanfare(), [], 2.5) // "YOU'RE INVITED"
+        .call(() => sfx.whoosh(0.8, "down"), [], "exit+=0.3"); // curtains part
+
+      // ---- the entry gate: one tap opens the lock, starts the score and
+      // rolls the ceremony — the opening always plays WITH sound.
+      const gate = el.querySelector<HTMLElement>("[data-gate]");
+      let entered = false;
+
+      // gate idle life: the ball drops into the lock, the shackle lands,
+      // then the whole lock floats on a pulsing halo
+      gsap.from("[data-gate-ball]", {
+        y: -160,
+        duration: 0.7,
+        ease: "bounce.out",
+        delay: 0.2,
+      });
+      gsap.from("[data-gate-shackle]", {
+        y: -24,
+        autoAlpha: 0,
+        duration: 0.45,
+        ease: "back.out(2)",
+        delay: 0.85,
+      });
+      gsap.to("[data-gate-float]", {
+        y: -10,
+        duration: 1.7,
+        yoyo: true,
+        repeat: -1,
+        ease: "sine.inOut",
+        delay: 1.3,
+      });
+      gsap.to("[data-gate-ring]", {
+        scale: 1.14,
+        opacity: 0.25,
+        duration: 1.4,
+        yoyo: true,
+        repeat: -1,
+        ease: "sine.inOut",
+      });
+
+      const enter = () => {
+        if (entered) return;
+        entered = true;
+        startMusic(); // the gate tap carries the activation — guaranteed
+        sfx.paddle();
+        const g = gsap.timeline();
+        g.to("[data-gate-shackle]", {
+          rotation: -42,
+          y: -12,
+          transformOrigin: "20% 100%",
+          duration: 0.32,
+          ease: "back.out(2.2)",
+        })
+          .to(
+            "[data-gate-ring]",
+            { scale: 2.4, autoAlpha: 0, duration: 0.5, ease: "power2.out" },
+            0.04
+          )
+          .to(
+            gate,
+            { autoAlpha: 0, scale: 1.05, duration: 0.4, ease: "power2.in" },
+            0.3
+          )
+          .call(
+            () => {
+              if (gate) {
+                gsap.killTweensOf(gate.querySelectorAll("*"));
+                gsap.set(gate, { display: "none" });
+              }
+              tl.play();
+            },
+            [],
+            0.66
+          );
       };
+
+      // The ceremony always plays through — no tap-to-skip. Escape stays
+      // as a quiet keyboard escape hatch; Enter/Space opens the gate.
       const onKey = (e: KeyboardEvent) => {
-        if (e.key === "Escape" || e.key === "Enter") skip();
+        if (!entered && (e.key === "Enter" || e.key === " ")) {
+          e.preventDefault();
+          enter();
+          return;
+        }
+        if (e.key === "Escape" && tl.progress() < 1 && tl.time() < tl.labels.exit) {
+          tl.play("exit");
+        }
       };
-      el.addEventListener("pointerdown", skip);
+      gate?.addEventListener("click", enter);
       window.addEventListener("keydown", onKey);
 
       return () => {
-        el.removeEventListener("pointerdown", skip);
+        gate?.removeEventListener("click", enter);
         window.removeEventListener("keydown", onKey);
         split?.revert();
         unlock();
@@ -353,14 +450,49 @@ export function LoadingScreen({ onComplete }: LoadingScreenProps) {
         >
           Salem's own pickleball franchise · Est. {site.year}
         </p>
-        <p
-          data-intro-hint
-          className="absolute bottom-8 font-condensed text-[0.7rem] uppercase tracking-[0.3em] text-ink-dim"
-          style={{ opacity: 0 }}
-        >
-          Tap anywhere to enter
-        </p>
       </div>
+
+      {/* Entry gate — a locked pickleball; one tap pops the shackle,
+          starts the score and rolls the ceremony with sound */}
+      <button
+        type="button"
+        data-gate
+        tabIndex={-1}
+        className="absolute inset-0 z-30 flex cursor-pointer flex-col items-center justify-center gap-10 outline-none"
+      >
+        <div data-gate-float className="relative flex flex-col items-center">
+          {/* pulsing halo */}
+          <span
+            data-gate-ring
+            className="absolute left-1/2 top-[58%] h-44 w-44 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-lime/35"
+          />
+          {/* shackle */}
+          <svg
+            data-gate-shackle
+            viewBox="0 0 100 62"
+            className="h-12 w-24 text-lime drop-shadow-[0_0_14px_rgba(203,230,110,0.35)]"
+            aria-hidden="true"
+          >
+            <path
+              d="M22 62 V36 a28 28 0 0 1 56 0 V62"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="9"
+              strokeLinecap="round"
+            />
+          </svg>
+          {/* the pickleball is the lock body */}
+          <div
+            data-gate-ball
+            className="-mt-3 h-28 w-28 drop-shadow-[0_18px_40px_rgba(5,13,31,0.7)] md:h-32 md:w-32"
+          >
+            <BallGlyph />
+          </div>
+        </div>
+        <p className="font-display text-3xl uppercase leading-none text-ink md:text-4xl">
+          Tap to enter
+        </p>
+      </button>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { ArrowRight, Gavel, MapPin, Trophy } from "lucide-react";
+import { ArrowRight, MapPin, Trophy, Users } from "lucide-react";
 import { Canvas, useFrame } from "@react-three/fiber";
 import * as THREE from "three";
 import { gsap, SplitText, useGSAP } from "@/lib/gsap";
@@ -13,6 +13,7 @@ import {
 } from "@/lib/leagueInvite";
 import { tnppl } from "@/data/siteData";
 import { scrollToSection } from "@/lib/scroll";
+import { sfx } from "@/lib/sound";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { BrandLights, FloatGroup, Paddle, Pickleball } from "@/components/three/models";
@@ -20,7 +21,7 @@ import { BrandLights, FloatGroup, Paddle, Pickleball } from "@/components/three/
 /** How long after the loading screen finishes before the invite appears. */
 const INVITE_DELAY_MS = 5000;
 
-const ICONS = { gavel: Gavel, trophy: Trophy, "map-pin": MapPin } as const;
+const ICONS = { trophy: Trophy, "map-pin": MapPin, users: Users } as const;
 
 function SpinningBall({
   reduced,
@@ -105,6 +106,14 @@ export function LeagueInviteDialog({ booted }: { booted: boolean }) {
     window.addEventListener(LEAGUE_INVITE_EVENT, openOnce);
     return () => window.removeEventListener(LEAGUE_INVITE_EVENT, openOnce);
   }, [openOnce]);
+
+  // Announce the invitation: a rising whoosh, then a fanfare.
+  useEffect(() => {
+    if (!open) return;
+    sfx.whoosh(0.5, "up");
+    const t = window.setTimeout(() => sfx.fanfare(), 260);
+    return () => window.clearTimeout(t);
+  }, [open]);
 
   // 3D entrance: the card flips up out of the depth of the page while
   // the ball pops in above it and the content rises line by line.
@@ -213,11 +222,13 @@ export function LeagueInviteDialog({ booted }: { booted: boolean }) {
   // Only a committed click remembers the invite for this session — a
   // refresh without choosing brings it back.
   const onCountMeIn = () => {
+    sfx.chime();
     markLeagueInviteSeen();
     setOpen(false);
     scrollToSection("#join");
   };
   const onKeepExploring = () => {
+    sfx.pop();
     markLeagueInviteSeen();
     setOpen(false);
   };
@@ -239,6 +250,9 @@ export function LeagueInviteDialog({ booted }: { booted: boolean }) {
           onInteractOutside={(e) => e.preventDefault()}
           className={cn(
             "fixed left-1/2 top-[52%] z-[95] w-[calc(100%-2rem)] max-w-lg -translate-x-1/2 -translate-y-1/2 outline-none sm:top-1/2",
+            // never scroll the invite — on short screens the whole ticket
+            // scales down to fit instead
+            "[@media(max-height:700px)]:scale-90 [@media(max-height:600px)]:scale-[0.78] [@media(max-height:500px)]:scale-[0.62]",
             "duration-300 data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=closed]:zoom-out-95 data-[state=closed]:slide-out-to-top-4",
             // reduced motion (or GSAP unavailable): plain fade/zoom entrance
             reduced &&
@@ -258,7 +272,7 @@ export function LeagueInviteDialog({ booted }: { booted: boolean }) {
             <div
               ref={ballRef}
               aria-hidden="true"
-              className="pointer-events-none absolute -top-14 left-1/2 z-20 h-28 w-52 -translate-x-1/2 sm:-top-[5.5rem] sm:h-36 sm:w-64"
+              className="pointer-events-none absolute -top-10 left-1/2 z-20 h-24 w-44 -translate-x-1/2 sm:-top-[5.5rem] sm:h-36 sm:w-64"
             >
               {/* rotating rays halo behind the crest */}
               <div
@@ -301,7 +315,7 @@ export function LeagueInviteDialog({ booted }: { booted: boolean }) {
                     "conic-gradient(from 0deg, transparent 0deg 296deg, rgba(203,230,110,0.55) 326deg, rgba(79,160,255,0.45) 342deg, transparent 360deg)",
                 }}
               />
-              <div className="relative rounded-[15px] bg-night-700/95 px-6 pb-6 pt-20 backdrop-blur-xl sm:px-8 sm:pb-8">
+              <div className="relative rounded-[15px] bg-night-700/95 px-5 pb-5 pt-14 backdrop-blur-xl sm:px-8 sm:pb-8 sm:pt-20">
                 {/* ambient glows inside the card */}
                 <div
                   aria-hidden="true"
@@ -358,7 +372,7 @@ export function LeagueInviteDialog({ booted }: { booted: boolean }) {
                   <DialogPrimitive.Title asChild>
                     <h2
                       ref={titleRef}
-                      className="font-display text-3xl uppercase leading-tight text-ink sm:text-4xl"
+                      className="font-display text-2xl uppercase leading-tight text-ink sm:text-4xl"
                     >
                       You&apos;re invited.
                       <span data-gradient-line className="text-gradient-lime block">
@@ -370,7 +384,7 @@ export function LeagueInviteDialog({ booted }: { booted: boolean }) {
                   <DialogPrimitive.Description
                     id="league-invite-desc"
                     data-invite-rise
-                    className="mx-auto mt-3 max-w-sm text-sm leading-relaxed text-ink-soft"
+                    className="mx-auto mt-2.5 max-w-sm text-[13px] leading-relaxed text-ink-soft sm:mt-3 sm:text-sm"
                   >
                     {tnppl.lead}
                   </DialogPrimitive.Description>
@@ -379,7 +393,7 @@ export function LeagueInviteDialog({ booted }: { booted: boolean }) {
                   <div
                     data-invite-rise
                     aria-hidden="true"
-                    className="relative -mx-6 my-5 sm:-mx-8"
+                    className="relative -mx-5 my-4 sm:-mx-8 sm:my-5"
                   >
                     <div className="border-t border-dashed border-line" />
                     <span className="absolute -left-3 top-1/2 h-6 w-6 -translate-y-1/2 rounded-full border border-line bg-night" />
@@ -389,22 +403,22 @@ export function LeagueInviteDialog({ booted }: { booted: boolean }) {
                     </span>
                   </div>
 
-                  <ul className="mx-auto mb-6 flex w-full max-w-sm flex-col gap-3">
+                  <ul className="mx-auto mb-5 flex w-full max-w-sm flex-col gap-2.5 sm:mb-6 sm:gap-3">
                     {tnppl.keyItems.map((item) => {
                       const Icon = ICONS[item.icon as keyof typeof ICONS] ?? MapPin;
                       return (
                         <li
                           key={item.title}
                           data-invite-rise
-                          className="group flex items-center gap-3 rounded-xl border border-line bg-white/[0.03] px-4 py-2.5 text-left transition-colors duration-300 hover:border-lime/40 hover:bg-lime/[0.06]"
+                          className="group flex items-center gap-3 rounded-xl border border-line bg-white/[0.03] px-3.5 py-2 text-left transition-colors duration-300 hover:border-lime/40 hover:bg-lime/[0.06] sm:px-4 sm:py-2.5"
                         >
-                          <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border border-lime/25 bg-lime/10 text-lime transition-transform duration-300 group-hover:scale-110">
+                          <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-lime/25 bg-lime/10 text-lime transition-transform duration-300 group-hover:scale-110 sm:h-9 sm:w-9">
                             <Icon aria-hidden="true" className="h-4 w-4" />
                           </span>
-                          <span className="font-condensed text-sm uppercase tracking-[0.14em] text-ink">
+                          <span className="font-condensed text-xs uppercase tracking-[0.14em] text-ink sm:text-sm">
                             {item.title}
                           </span>
-                          <span className="ml-auto text-right text-sm text-ink-soft">
+                          <span className="ml-auto text-right text-xs text-ink-soft sm:text-sm">
                             {item.detail}
                           </span>
                         </li>
@@ -428,7 +442,7 @@ export function LeagueInviteDialog({ booted }: { booted: boolean }) {
                   {/* ticket-stub small print */}
                   <p
                     data-invite-rise
-                    className="mt-5 font-condensed text-[10px] uppercase tracking-[0.3em] text-ink-dim"
+                    className="mt-4 font-condensed text-[10px] uppercase tracking-[0.3em] text-ink-dim sm:mt-5"
                   >
                     Admit: all of Salem · {tnppl.title}
                   </p>

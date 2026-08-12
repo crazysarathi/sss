@@ -4,6 +4,7 @@ import { scrollToSection } from "@/lib/scroll";
 import { prefersReducedMotion } from "@/lib/utils";
 import { useIsMobile } from "@/hooks/useMediaQuery";
 
+import { attachSoundUnlock, stopMusic, tryAutoStart } from "@/lib/sound";
 import { LoadingScreen } from "@/components/layout/LoadingScreen";
 import { Navbar } from "@/components/layout/Navbar";
 import { BackToTop } from "@/components/layout/BackToTop";
@@ -109,6 +110,18 @@ export default function App() {
     if ("scrollRestoration" in history) history.scrollRestoration = "manual";
     window.scrollTo(0, 0);
   }, []);
+
+  // Sound is always on. Try to start the score with the page (browsers
+  // that allow it), and arm gesture listeners as the guaranteed fallback.
+  // Music belongs to the intro only: once it finishes, fade the
+  // soundtrack out for good and leave just the one-shot SFX.
+  useEffect(() => {
+    attachSoundUnlock();
+    tryAutoStart();
+  }, []);
+  useEffect(() => {
+    if (booted) stopMusic();
+  }, [booted]);
 
   return (
     <>

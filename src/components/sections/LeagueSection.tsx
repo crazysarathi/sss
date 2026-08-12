@@ -1,27 +1,42 @@
-import { Fragment, useRef } from "react";
-import { ArrowUpRight, Gavel, Trophy, MapPin, type LucideIcon } from "lucide-react";
+import { Fragment, useRef, useState } from "react";
+import {
+  ArrowUpRight,
+  Maximize2,
+  Trophy,
+  MapPin,
+  Users,
+  type LucideIcon,
+} from "lucide-react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { cn, prefersReducedMotion } from "@/lib/utils";
 import { liveStrip, tnppl } from "@/data/siteData";
+import { sfx } from "@/lib/sound";
 import { SectionHeading } from "@/components/shared/SectionHeading";
 import { GlassCard } from "@/components/shared/GlassCard";
 import { StatCounter } from "@/components/shared/StatCounter";
 import { ScrollReveal } from "@/components/shared/ScrollReveal";
+import { MediaLightbox } from "@/components/shared/MediaLightbox";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 import tnpplLogo from "@/assets/logos/tnppl-logo.png";
+import posterPreview from "@/assets/posters/tnppl-season2-preview.jpg";
+import poster4k from "@/assets/posters/tnppl-season2-4k.jpg";
+
+const POSTER_ALT =
+  "TNPPL Season 2 — tournament at a glance: 12 franchise teams, 168 players, 4 days at Express Avenue Mall Chennai, ₹36 lakh prize pool, 14 players per team";
 
 const KEY_ICONS: Record<(typeof tnppl.keyItems)[number]["icon"], LucideIcon> = {
-  gavel: Gavel,
   trophy: Trophy,
   "map-pin": MapPin,
+  users: Users,
 };
 
 /** Phrases inside tnppl.cardBody that deserve typographic emphasis. */
 const HIGHLIGHTS: readonly string[] = [
-  "16 franchise teams",
-  "160 players",
-  "₹7,00,000 prize pool",
+  "12 franchise teams",
+  "168 players",
+  "₹36,00,000 prize pool",
+  "14 players",
 ];
 
 function escapeRegExp(s: string): string {
@@ -52,6 +67,7 @@ function EmphasizedBody({ text }: { text: string }) {
  */
 export function LeagueSection() {
   const sectionRef = useRef<HTMLElement>(null);
+  const [posterOpen, setPosterOpen] = useState(false);
 
   useGSAP(
     () => {
@@ -265,8 +281,57 @@ export function LeagueSection() {
               );
             })}
           </ScrollReveal>
+
+          {/* Season 2 poster — the official tournament-at-a-glance, one
+              tap from the full 4K view */}
+          <ScrollReveal className="mt-6 md:mt-8">
+            <button
+              type="button"
+              onClick={() => {
+                sfx.pop();
+                setPosterOpen(true);
+              }}
+              aria-label="View the TNPPL Season 2 tournament poster full size"
+              className="group relative block w-full overflow-hidden rounded-lg border border-line shadow-card-deep transition-[border-color,transform] duration-300 hover:-translate-y-1 hover:border-lime/40 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring"
+            >
+              <img
+                src={posterPreview}
+                alt={POSTER_ALT}
+                loading="lazy"
+                decoding="async"
+                className="w-full object-cover transition-transform duration-700 group-hover:scale-[1.02]"
+              />
+              <span
+                aria-hidden="true"
+                className="absolute inset-0 bg-gradient-to-t from-night/85 via-transparent to-transparent"
+              />
+              <span className="absolute bottom-3 left-4 flex items-center gap-3 sm:bottom-4 sm:left-5">
+                <span className="flex h-8 w-8 items-center justify-center rounded-full border border-lime/40 bg-night/70 text-lime backdrop-blur-sm sm:h-9 sm:w-9">
+                  <Maximize2 className="h-4 w-4" aria-hidden="true" />
+                </span>
+                <span className="font-condensed text-xs uppercase tracking-[0.24em] text-ink sm:text-sm">
+                  Season 2 · Tournament at a glance — tap to view
+                </span>
+              </span>
+            </button>
+          </ScrollReveal>
         </div>
       </section>
+
+      {/* Full-size poster viewer (4K render) */}
+      <MediaLightbox
+        media={
+          posterOpen
+            ? {
+                type: "image",
+                src: poster4k,
+                alt: POSTER_ALT,
+                title: "TNPPL Season 2 — Tournament at a Glance",
+              }
+            : null
+        }
+        onClose={() => setPosterOpen(false)}
+      />
     </>
   );
 }

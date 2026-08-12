@@ -51,16 +51,16 @@ export const tnppl = {
   lead: "The Salem Super Smashers take the court in the Tamil Nadu Pickleball Premier League — and you're invited to follow every smash.",
   cardTitle: "Tamil Nadu Pickleball Premier League",
   cardBody:
-    "India's only state-owned, franchise-based pickleball league — organised by the Tamil Nadu Pickleball Association and recognised by SDAT. Season 1 set the benchmark with 16 franchise teams, 160 players and a ₹7,00,000 prize pool. Season 2 is bigger — and Salem now has a team in the fight.",
+    "India's only state-owned, franchise-based pickleball league — organised by the Tamil Nadu Pickleball Association and recognised by SDAT. Season 2 brings 12 franchise teams and 168 players — 36 women, 36 men 50+ and 96 men's open — split into two pools of six, chasing a ₹36,00,000 prize pool. Every squad fields 14 players, and Salem now has a team in the fight.",
   stats: [
-    { value: 16, suffix: "", label: "Franchise Teams" },
-    { value: 160, suffix: "", label: "Players" },
-    { value: 7, prefix: "₹", suffix: "L", label: "S1 Prize Pool" },
-    { value: 1, suffix: "L+", label: "Players in India" },
+    { value: 12, suffix: "", label: "Franchise Teams" },
+    { value: 168, suffix: "", label: "Players" },
+    { value: 36, prefix: "₹", suffix: "L", label: "Prize Pool" },
+    { value: 14, suffix: "", label: "Players Per Squad" },
   ],
   keyItems: [
-    { icon: "gavel", title: "Player Auction", detail: "4 August 2026" },
     { icon: "trophy", title: "Season 2 Tournament", detail: "17 – 20 September 2026" },
+    { icon: "users", title: "The Field", detail: "12 teams · 168 players" },
     {
       icon: "map-pin",
       title: "Venue",
@@ -139,8 +139,8 @@ export const events = {
       id: "player-auction",
       day: "04",
       month: "AUG",
-      title: "TNPPL Player Auction",
-      detail: "The Smashers squad takes shape",
+      title: "Grand Player Auction & Press Meet",
+      detail: "Live auction at a 5-star hotel — the Smashers squad takes shape",
       tag: "Done ✓",
       status: "done" as const,
     },
@@ -149,8 +149,8 @@ export const events = {
       day: "17–20",
       month: "SEP",
       title: "TNPPL Season 2 — Tournament",
-      detail: "Express Avenue Mall, Central Atrium",
-      tag: "League",
+      detail: "Express Avenue Mall, Central Atrium · 12 teams · 2 pools of 6",
+      tag: "League · 4 Days",
       status: "upcoming" as const,
     },
   ],
@@ -199,7 +199,7 @@ export const program = {
   ],
   stats: [
     { value: 14, suffix: "", label: "Players Signed" },
-    { value: 5, suffix: "+", label: "Programs Held" },
+    { value: 5, suffix: "", label: "Programs Held" },
     { value: 1, suffix: "", label: "City United" },
   ],
 } as const;

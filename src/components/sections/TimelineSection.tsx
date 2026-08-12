@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { ArrowUpRight, CheckCircle2, Images } from "lucide-react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { cn, prefersReducedMotion } from "@/lib/utils";
+import { sfx } from "@/lib/sound";
 import { events, type EventItem } from "@/data/siteData";
 import { eventMoments } from "@/data/momentsData";
 import { openEventMoments } from "@/lib/momentsNav";
@@ -112,6 +113,22 @@ export function TimelineSection() {
       const markerWrap = markerWrapRef.current;
       const marker = markerRef.current;
       if (fill && markerWrap && marker) {
+        // Soft thock each time the rolling ball passes an event node on
+        // the rail (forward playhead crossings only — silent going back).
+        const rows = gsap.utils.toArray<HTMLElement>("[data-event-row]", list);
+        // Measure each node dot for real: absolutely placed at top-10 on
+        // mobile, grid-centered on desktop — offsetTop is li-relative in
+        // both layouts.
+        const measureNodes = () =>
+          rows.map((r) => {
+            const dot = r.querySelector<HTMLElement>("[data-node-dot]");
+            return dot
+              ? r.offsetTop + dot.offsetTop + dot.offsetHeight / 2
+              : r.offsetTop + 40;
+          });
+        let nodeYs = measureNodes();
+        let lastMarkerY = 0;
+
         const progress = gsap.timeline({
           defaults: { ease: "none" },
           scrollTrigger: {
@@ -120,7 +137,27 @@ export function TimelineSection() {
             end: "bottom 55%",
             scrub: 1,
             invalidateOnRefresh: true,
+            onRefresh: () => {
+              nodeYs = measureNodes();
+            },
           },
+        });
+        // Detect crossings on the scrubbed playhead itself (not the raw
+        // scroll progress) so the sound lands exactly when the marker
+        // visually reaches each node.
+        progress.eventCallback("onUpdate", () => {
+          const y =
+            progress.progress() * (list.offsetHeight - MARKER_SIZE) +
+            MARKER_SIZE / 2;
+          if (y > lastMarkerY) {
+            for (const ny of nodeYs) {
+              if (lastMarkerY < ny && y >= ny) {
+                sfx.bounce(0.4);
+                break;
+              }
+            }
+          }
+          lastMarkerY = y;
         });
         progress
           // marker appears with the scrub — after the handoff ball from the
@@ -245,6 +282,7 @@ export function TimelineSection() {
                   {/* Node dot on the rail */}
                   <span
                     aria-hidden="true"
+                    data-node-dot
                     className={cn(
                       "absolute left-4 top-10 z-10 h-3 w-3 -translate-x-1/2 rounded-full border-2",
                       "md:static md:col-start-2 md:row-start-1 md:translate-x-0 md:justify-self-center",

@@ -1,6 +1,7 @@
 import { useRef } from "react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { prefersReducedMotion } from "@/lib/utils";
+import { sfx } from "@/lib/sound";
 
 /**
  * Scroll-scrubbed handoff between the Identity stage and the Schedule of
@@ -81,6 +82,23 @@ export function BallHandoff() {
         .fromTo(ball, { rotation: 0 }, { rotation: 720, ease: "none", duration: 1 }, 0)
         // …and is absorbed at the rail's tip, where the timeline takes over.
         .to(ball, { autoAlpha: 0, scale: 0.55, duration: 0.1, ease: "power1.in" }, 0.9);
+
+      // Soft landing thock as the ball reaches the rail. The timeline is
+      // scrub-driven, so detect forward playhead crossings ourselves and
+      // throttle re-fires.
+      let lastLand = 0;
+      let prevProgress = 0;
+      tl.eventCallback("onUpdate", () => {
+        const p = tl.progress();
+        if (prevProgress < 0.88 && p >= 0.88) {
+          const now = performance.now();
+          if (now - lastLand >= 1500) {
+            lastLand = now;
+            sfx.bounce(0.5);
+          }
+        }
+        prevProgress = p;
+      });
     },
     { scope: rootRef }
   );
