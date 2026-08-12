@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { ArrowLeft, Clapperboard, Image as ImageIcon, Play } from "lucide-react";
 import { gsap, useGSAP } from "@/lib/gsap";
 import { cn, prefersReducedMotion } from "@/lib/utils";
+import { sfx } from "@/lib/sound";
 import { eventMoments } from "@/data/momentsData";
 import { getMomentsEntrySide } from "@/lib/momentsNav";
 import { ShinyText } from "@/components/reactbits/ShinyText";
@@ -91,6 +92,12 @@ export function EventMomentsPage({ slug, onBack }: EventMomentsPageProps) {
 
     const tl = gsap.timeline({ onComplete: onBack });
     tl.set(ball, { autoAlpha: 1 })
+      // exit score: page whooshes away while the ball's bounces land in
+      // sync with the bounce.out ease (touchdowns at ~36% / 73% / 91%)
+      .call(() => sfx.whoosh(0.55, "down"), [], 0.15)
+      .call(() => sfx.bounce(0.9), [], 0.29)
+      .call(() => sfx.bounce(0.5), [], 0.58)
+      .call(() => sfx.bounce(0.3), [], 0.73)
       .to(ball, { x: -dir * vw * 0.42, rotation: -dir * 720, duration: 0.8, ease: "power1.in" }, 0)
       .to(ball, { y: vh * 0.78, duration: 0.8, ease: "bounce.out" }, 0)
       .to(
@@ -128,12 +135,19 @@ export function EventMomentsPage({ slug, onBack }: EventMomentsPageProps) {
       const rings = splash.querySelectorAll("[data-ring]");
       const dots = splash.querySelectorAll("[data-dot]");
 
+      const impact = 0.63;
       const tl = gsap.timeline({
         onComplete: () => setIntroDone(true),
       });
 
       tl.set(page, { xPercent: -100 * dir })
         .set(splash, { autoAlpha: 0 })
+        // entrance score: ball pops up, paddle swings, smash on impact,
+        // then a rising whoosh carries the gallery in
+        .call(() => sfx.bounce(0.7), [], 0.08)
+        .call(() => sfx.swish(), [], 0.22)
+        .call(() => sfx.smash(), [], impact)
+        .call(() => sfx.whoosh(0.7, "up"), [], impact + 0.05)
         // ball pops up at centre court
         .fromTo(
           ball,
@@ -149,7 +163,6 @@ export function EventMomentsPage({ slug, onBack }: EventMomentsPageProps) {
           0.18
         );
 
-      const impact = 0.63;
       tl.addLabel("impact", impact)
         // the smash: ball rockets across on an arc, spinning
         .to(ball, { x: dir * vw * 0.58, duration: 0.75, ease: "power2.out" }, "impact")
