@@ -831,6 +831,82 @@ function pop(): void {
   o.stop(t + 0.09);
 }
 
+/**
+ * Metal-on-metal clatter — the locked shackle straining in its hasp.
+ * Three inharmonic partials give the "cheap padlock" ring; the noise burst
+ * is the clack of the shackle slamming back down.
+ */
+function rattle(strength = 1): void {
+  const c = live();
+  if (!c || !sfxBus) return;
+  const out = sfxBus;
+  const t = c.currentTime;
+  [1830, 2470, 3290].forEach((f, i) => {
+    const o = c.createOscillator();
+    o.type = "square";
+    o.frequency.setValueAtTime(f, t);
+    o.frequency.exponentialRampToValueAtTime(f * 0.86, t + 0.09);
+    const g = c.createGain();
+    g.gain.setValueAtTime(0.05 * strength * (1 - i * 0.24), t);
+    g.gain.exponentialRampToValueAtTime(0.0001, t + 0.09 + i * 0.03);
+    o.connect(g).connect(out);
+    o.start(t);
+    o.stop(t + 0.15);
+  });
+  const n = noise(c);
+  const bp = c.createBiquadFilter();
+  bp.type = "bandpass";
+  bp.frequency.value = 2700;
+  bp.Q.value = 0.9;
+  const ng = c.createGain();
+  ng.gain.setValueAtTime(0.15 * strength, t);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.05);
+  n.connect(bp).connect(ng).connect(sfxBus);
+  n.start(t);
+  n.stop(t + 0.07);
+}
+
+/** The bolt gives: key click → shackle springs open → low release thump. */
+function unlock(): void {
+  const c = live();
+  if (!c || !sfxBus) return;
+  const t = c.currentTime;
+  // the click of the mechanism letting go
+  const n = noise(c);
+  const hp = c.createBiquadFilter();
+  hp.type = "highpass";
+  hp.frequency.value = 5200;
+  const ng = c.createGain();
+  ng.gain.setValueAtTime(0.3, t);
+  ng.gain.exponentialRampToValueAtTime(0.0001, t + 0.03);
+  n.connect(hp).connect(ng).connect(sfxBus);
+  n.start(t);
+  n.stop(t + 0.05);
+  // the shackle springing up out of the body
+  const o = c.createOscillator();
+  o.type = "triangle";
+  o.frequency.setValueAtTime(320, t + 0.02);
+  o.frequency.exponentialRampToValueAtTime(1150, t + 0.2);
+  const g = c.createGain();
+  g.gain.setValueAtTime(0.0001, t + 0.02);
+  g.gain.exponentialRampToValueAtTime(0.24, t + 0.05);
+  g.gain.exponentialRampToValueAtTime(0.0001, t + 0.26);
+  o.connect(g).connect(sfxBus);
+  o.start(t + 0.02);
+  o.stop(t + 0.28);
+  // the weight of the lock dropping free
+  const o2 = c.createOscillator();
+  o2.type = "sine";
+  o2.frequency.setValueAtTime(190, t + 0.03);
+  o2.frequency.exponentialRampToValueAtTime(52, t + 0.3);
+  const g2 = c.createGain();
+  g2.gain.setValueAtTime(0.5, t + 0.03);
+  g2.gain.exponentialRampToValueAtTime(0.0001, t + 0.36);
+  o2.connect(g2).connect(sfxBus);
+  o2.start(t + 0.03);
+  o2.stop(t + 0.38);
+}
+
 /** Ratchet tick for the slide-to-serve track; pitch rises with progress. */
 function tick(progress: number): void {
   const c = live();
@@ -860,4 +936,6 @@ export const sfx = {
   hover,
   pop,
   tick,
+  rattle,
+  unlock,
 } as const;
